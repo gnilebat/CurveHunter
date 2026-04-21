@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"const m = require\\('@protomaps/basemaps'\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(node -e \"const {layers, namedFlavor} = require\\('c:/Users/johan/Documents/projects/CurveHunter/frontend/node_modules/@protomaps/basemaps'\\); const l = layers\\('protomaps', namedFlavor\\('light'\\)\\); console.log\\('count:', l.length, 'sample id:', l[0]?.id\\)\")",
+      "Bash(node -e \"console.log\\(require\\('c:/Users/johan/Documents/projects/CurveHunter/frontend/node_modules/maplibre-gl/package.json'\\).version\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

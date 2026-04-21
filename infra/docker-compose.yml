@@ -1,0 +1,83 @@
+services:
+
+  # ── Reverse proxy + tile server ─────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tiles:/var/tiles:ro              # place your .pmtiles file here
+      - ../frontend/dist:/var/www:ro       # built frontend
+    depends_on:
+      - backend
+
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      GRAPHHOPPER_URL: http://graphhopper:8989
+      NOMINATIM_URL: http://nominatim:8080
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      graphhopper:
+        condition: service_started
+
+  # ── GraphHopper routing engine ───────────────────────────────────────────────
+  graphhopper:
+    image: graphhopper/graphhopper:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/osm:/data                   # place map.osm.pbf here
+      - graphhopper-cache:/data/graph-cache
+      - ../routing/config.yml:/graphhopper/config.yml:ro
+      - ../routing/motorcycle_curvy.json:/graphhopper/motorcycle_curvy.json:ro
+    environment:
+      JAVA_OPTS: -Xmx4g -Xms1g
+    command: ["java", "-jar", "graphhopper*.jar", "server", "config.yml"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8989/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ── Nominatim geocoder ───────────────────────────────────────────────────────
+  nominatim:
+    image: mediagis/nominatim:4.4
+    restart: unless-stopped
+    environment:
+      PBF_PATH: /nominatim/data/map.osm.pbf
+      REPLICATION_URL: ""
+      NOMINATIM_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/osm:/nominatim/data:ro
+      - nominatim-data:/var/lib/postgresql/14/main
+    shm_size: 1g
+
+  # ── PostgreSQL + PostGIS ─────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  graphhopper-cache:
+  nominatim-data:

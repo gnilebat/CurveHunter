@@ -1,0 +1,28 @@
+graphhopper:
+  datareader.file: /data/map.osm.pbf
+  graph.location: /data/graph-cache
+
+  profiles:
+    - name: motorcycle
+      vehicle: motorcycle
+      weighting: fastest
+      turn_costs: false
+
+    - name: motorcycle_curvy
+      vehicle: motorcycle
+      weighting: custom
+      custom_model_files: [motorcycle_curvy.json]
+      turn_costs: false
+
+  profiles_ch:
+    - profile: motorcycle
+
+  import.osm.ignored_highways: footway,cycleway,path,pedestrian,steps
+
+server:
+  application_connector:
+    type: http
+    port: 8989
+  admin_connector:
+    type: http
+    port: 8990

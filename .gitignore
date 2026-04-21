@@ -1,0 +1,30 @@
+# Dependencies
+frontend/node_modules/
+frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+etl/.venv/
+backend/.venv/
+
+# Environment
+infra/.env
+.env
+
+# Large data files — download separately, never commit
+infra/tiles/*.pmtiles
+infra/data/osm/*.pbf
+infra/data/osm/*.osm
+infra/data/dem/*.tif
+infra/data/dem/*.tiff
+
+# Docker volumes (if bind-mounted locally)
+infra/data/postgres/
+infra/data/nominatim/
+infra/data/graphhopper/
+
+# OS
+.DS_Store
+Thumbs.db
