@@ -1,16 +1,41 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { fetchRoute } from '../api/client'
+import { ApiError, fetchRoute } from '../api/client'
 import { DEFAULT_ROUTE_OPTIONS } from '../types'
 import type { Waypoint, RouteResult, RouteOptions } from '../types'
 
 const ROUTE_DEBOUNCE_MS = 450
+
+export interface RouteError {
+  key: string
+  vars?: Record<string, string | number>
+}
+
+function classifyRouteError(err: unknown): RouteError {
+  if (err instanceof ApiError) {
+    if (err.status === 0) return { key: 'errors.network' }
+    if (err.status === 404) {
+      const d = err.detail as { message?: string; point_index?: number } | null
+      if (d && typeof d === 'object') {
+        if (typeof d.point_index === 'number') {
+          return { key: 'errors.pointOutOfCoverage', vars: { n: d.point_index + 1 } }
+        }
+        if (typeof d.message === 'string' && /point/i.test(d.message)) {
+          return { key: 'errors.pointOutOfCoverageUnknown' }
+        }
+      }
+      return { key: 'errors.noRouteFound' }
+    }
+    if (err.status >= 500) return { key: 'errors.serverBusy' }
+  }
+  return { key: 'errors.routingFailed' }
+}
 
 export function useRoute() {
   const [waypoints, setWaypointsState] = useState<(Waypoint | null)[]>([null, null])
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [options, setOptionsState] = useState<RouteOptions>(DEFAULT_ROUTE_OPTIONS)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<RouteError | null>(null)
   const reqId = useRef(0)
 
   const planRoute = useCallback(async (pts: Waypoint[], opts: RouteOptions) => {
@@ -22,7 +47,7 @@ export function useRoute() {
       if (id === reqId.current) setRoute(result)
     } catch (err) {
       if (id === reqId.current) {
-        setError(err instanceof Error ? err.message : 'Routing failed')
+        setError(classifyRouteError(err))
         setRoute(null)
       }
     } finally {

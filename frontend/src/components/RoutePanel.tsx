@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
+import type { RouteError } from '../hooks/useRoute'
 import {
   MIN_CURVE_SPEED_STEPS,
   ROUTE_PRESETS, PRESET_ORDER, matchPreset, type PresetId
@@ -17,7 +18,7 @@ interface Props {
   waypoints: (Waypoint | null)[]
   route: RouteResult | null
   loading: boolean
-  error: string | null
+  error: RouteError | null
   options: RouteOptions
   onWaypointChange: (idx: number, wp: Waypoint | null) => void
   onInsertAfter: (idx: number) => void
@@ -274,7 +275,7 @@ export function RoutePanel({
 
       {error && (
         <div className={styles.error}>
-          <span>{error}</span>
+          <span>{t(error.key, error.vars)}</span>
           <button className={styles.retryLink} onClick={onRetry}>{t('panel.retry')}</button>
         </div>
       )}

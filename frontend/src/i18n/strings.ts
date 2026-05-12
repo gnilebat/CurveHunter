@@ -70,6 +70,14 @@ export const strings = {
       clear: 'Löschen',
       noMatches: 'Keine Treffer für „{query}"'
     },
+    errors: {
+      routingFailed: 'Route konnte nicht berechnet werden. Bitte erneut versuchen.',
+      pointOutOfCoverage: 'Punkt {n} liegt außerhalb des Kartenbereichs. Bitte einen näheren Ort wählen.',
+      pointOutOfCoverageUnknown: 'Einer der gewählten Punkte liegt außerhalb des Kartenbereichs.',
+      noRouteFound: 'Keine Route zwischen diesen Punkten gefunden.',
+      network: 'Server nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.',
+      serverBusy: 'Die Routing-Engine startet gerade oder ist kurzzeitig nicht verfügbar. Bitte gleich erneut versuchen.'
+    },
     nav: {
       arrived: 'Ziel erreicht',
       endOfRoute: 'Routenende',
@@ -165,6 +173,14 @@ export const strings = {
       searching: 'Searching',
       clear: 'Clear',
       noMatches: 'No matches for "{query}"'
+    },
+    errors: {
+      routingFailed: 'Could not calculate a route. Please try again.',
+      pointOutOfCoverage: 'Point {n} is outside the map coverage area. Pick a closer location.',
+      pointOutOfCoverageUnknown: 'One of the selected points is outside the map coverage area.',
+      noRouteFound: 'No route found between these points.',
+      network: 'Cannot reach the server. Check your connection and try again.',
+      serverBusy: 'The routing engine is starting up or temporarily unavailable. Please retry in a moment.'
     },
     nav: {
       arrived: "You've arrived",

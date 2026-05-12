@@ -2,14 +2,30 @@ import type { RouteResult, RouteSegment, RouteOptions, SearchResult, Waypoint } 
 
 const BASE = '/api'
 
+export class ApiError extends Error {
+  status: number
+  detail: unknown
+  constructor(status: number, detail: unknown) {
+    super(`API ${status}`)
+    this.status = status
+    this.detail = detail
+  }
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init
+    })
+  } catch {
+    throw new ApiError(0, null)  // network failure
+  }
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`API error ${res.status}: ${text}`)
+    let detail: unknown = null
+    try { detail = (await res.json()).detail } catch { /* non-JSON body */ }
+    throw new ApiError(res.status, detail)
   }
   return res.json()
 }

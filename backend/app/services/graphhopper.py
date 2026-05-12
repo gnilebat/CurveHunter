@@ -6,6 +6,14 @@ from typing import Any
 GH_URL = os.environ["GRAPHHOPPER_URL"]
 
 
+class RoutingRequestError(Exception):
+    """GraphHopper rejected the request (e.g. point outside coverage)."""
+    def __init__(self, message: str, point_index: int | None = None):
+        super().__init__(message)
+        self.message = message
+        self.point_index = point_index
+
+
 def build_custom_model(
     curviness: float,
     avoid_motorways: float,
@@ -121,5 +129,15 @@ async def route(
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(f"{GH_URL}/route", json=payload)
+        if resp.status_code == 400:
+            try:
+                body = resp.json()
+            except Exception:
+                body = {}
+            hint = (body.get("hints") or [{}])[0]
+            raise RoutingRequestError(
+                message=hint.get("message") or body.get("message") or "Bad routing request",
+                point_index=hint.get("point_index")
+            )
         resp.raise_for_status()
         return resp.json()

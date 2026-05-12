@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.services import graphhopper
+from app.services.graphhopper import RoutingRequestError
 from app.services.curvature import (
     overall_curvature, segment_curvature,
     build_urban_mask, build_highway_mask, build_speed_below_mask,
@@ -73,6 +74,11 @@ async def plan_route(req: RouteRequest):
             avoid_urban=req.options.avoid_urban,
             ignore_urban_curves=req.options.ignore_urban_curves,
             min_curve_speed=req.options.min_curve_speed
+        )
+    except RoutingRequestError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": e.message, "point_index": e.point_index}
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
