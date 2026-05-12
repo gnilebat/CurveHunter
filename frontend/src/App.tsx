@@ -191,6 +191,13 @@ export default function App() {
     }
   }, [nav.active, waypoints, setWaypoint])
 
+  const handleWaypointDragEnd = useCallback((idx: number, lat: number, lng: number) => {
+    // Replace the dragged waypoint with the new position. Name becomes a
+    // coordinate stamp so it's clear it was hand-placed rather than searched.
+    const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    setWaypoint(idx, { lat, lng, name })
+  }, [setWaypoint])
+
   const handleRecalcFromUser = useCallback(() => {
     if (!nav.userPos) return
     // Prepend current location as a new first waypoint — the existing start
@@ -241,6 +248,7 @@ export default function App() {
           waypoints={waypoints}
           route={route}
           onMapClick={handleMapClick}
+          onWaypointDragEnd={nav.active ? undefined : handleWaypointDragEnd}
           followUser={nav.active}
           userPos={nav.userPos}
           dimUrbanSegments={options.ignoreUrbanCurves}

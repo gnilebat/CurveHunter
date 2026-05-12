@@ -38,6 +38,8 @@ interface Props {
   waypoints: (Waypoint | null)[]
   route: RouteResult | null
   onMapClick?: (lat: number, lng: number) => void
+  /** Fires after the user drags a waypoint marker and releases it. */
+  onWaypointDragEnd?: (idx: number, lat: number, lng: number) => void
   followUser?: boolean
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
@@ -90,7 +92,7 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
 ] as maplibregl.ExpressionSpecification
 
 export function Map({
-  waypoints, route, onMapClick, followUser, userPos,
+  waypoints, route, onMapClick, onWaypointDragEnd, followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
   bottomInset = 0
 }: Props) {
@@ -240,15 +242,23 @@ export function Map({
       const color = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#3b82f6'
       const el = document.createElement('div')
       if (isFirst || isLast) {
-        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);`
+        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;`
       } else {
-        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;`
+        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;cursor:grab;`
         el.textContent = String(idx)
       }
-      const marker = new maplibregl.Marker({ element: el }).setLngLat([wp.lng, wp.lat]).addTo(map)
+      const marker = new maplibregl.Marker({ element: el, draggable: true })
+        .setLngLat([wp.lng, wp.lat])
+        .addTo(map)
+      marker.on('dragstart', () => { el.style.cursor = 'grabbing' })
+      marker.on('dragend', () => {
+        el.style.cursor = 'grab'
+        const ll = marker.getLngLat()
+        onWaypointDragEnd?.(idx, ll.lat, ll.lng)
+      })
       waypointMarkers.current.push(marker)
     })
-  }, [waypoints])
+  }, [waypoints, onWaypointDragEnd])
 
   // Dim segments excluded from the curviness score (urban / below-speed)
   useEffect(() => {
