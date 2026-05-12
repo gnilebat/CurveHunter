@@ -20,8 +20,10 @@ interface RouteApiResponse {
   duration_s: number
   ascent_m: number
   descent_m: number
+  motorway_m: number
+  trunk_m: number
   curvature_score: number | null
-  segments: { coordinates: number[][]; score: number; length_km: number; is_urban: boolean; is_highway: boolean }[]
+  segments: { coordinates: number[][]; score: number; length_km: number; is_urban: boolean; is_highway: boolean; is_below_speed: boolean }[]
   instructions: {
     text: string
     distance_m: number
@@ -58,7 +60,8 @@ export async function fetchRoute(
     score: s.score,
     lengthKm: s.length_km,
     isUrban: s.is_urban,
-    isHighway: s.is_highway
+    isHighway: s.is_highway,
+    isBelowSpeed: s.is_below_speed
   }))
   return {
     geometry: r.geometry,
@@ -66,6 +69,8 @@ export async function fetchRoute(
     durationS: r.duration_s,
     ascentM: r.ascent_m,
     descentM: r.descent_m,
+    motorwayM: r.motorway_m,
+    trunkM: r.trunk_m,
     curvatureScore: r.curvature_score,
     segments,
     instructions: r.instructions.map(i => ({

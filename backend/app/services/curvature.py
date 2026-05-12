@@ -56,6 +56,30 @@ URBAN_ROAD_CLASSES = {"residential", "living_street", "service", "pedestrian"}
 HIGHWAY_LIKE_ROAD_CLASSES = {"motorway", "trunk"}
 
 
+def build_class_mask(
+    n_coords: int,
+    road_class_ranges: list,
+    classes: set[str]
+) -> list[bool]:
+    """Generic per-coordinate mask for any set of OSM road_class values."""
+    mask = [False] * n_coords
+    for entry in road_class_ranges:
+        from_idx, to_idx, cls = entry[0], entry[1], entry[2]
+        if isinstance(cls, str) and cls.lower() in classes:
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                mask[i] = True
+    return mask
+
+
+def length_in_mask_m(coords: list[list[float]], mask: list[bool]) -> float:
+    """Sum haversine length of edges where both endpoints fall inside the mask."""
+    total = 0.0
+    for i in range(len(coords) - 1):
+        if i < len(mask) and i + 1 < len(mask) and mask[i] and mask[i + 1]:
+            total += _haversine_m(coords[i], coords[i + 1])
+    return total
+
+
 def build_urban_mask(
     n_coords: int,
     road_class_ranges: list,
@@ -112,7 +136,8 @@ def segment_curvature(
     coords: list[list[float]],
     window_m: float = 500.0,
     urban_mask: list[bool] | None = None,
-    highway_mask: list[bool] | None = None
+    highway_mask: list[bool] | None = None,
+    below_speed_mask: list[bool] | None = None
 ) -> list[dict]:
     """
     Split the path into ~window_m sized chunks and score each.
@@ -120,7 +145,10 @@ def segment_curvature(
     Adjacent segments share an endpoint so the rendered line has no gaps.
     """
     if len(coords) < 3:
-        return [{"coordinates": coords, "score": 0.0, "length_km": 0.0, "is_urban": False, "is_highway": False}]
+        return [{
+            "coordinates": coords, "score": 0.0, "length_km": 0.0,
+            "is_urban": False, "is_highway": False, "is_below_speed": False
+        }]
 
     segments: list[dict] = []
     buf: list[list[float]] = [coords[0]]
@@ -146,7 +174,8 @@ def segment_curvature(
                 "score": round(score, 1),
                 "length_km": round(length_km, 3),
                 "is_urban": mask_fraction(urban_mask, buf_indices) >= 0.5,
-                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5
+                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5,
+                "is_below_speed": mask_fraction(below_speed_mask, buf_indices) >= 0.5
             })
             buf = [coords[i]]
             buf_indices = [i]
@@ -166,7 +195,8 @@ def segment_curvature(
                 "score": round(score, 1),
                 "length_km": round(length_km, 3),
                 "is_urban": mask_fraction(urban_mask, buf_indices) >= 0.5,
-                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5
+                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5,
+                "is_below_speed": mask_fraction(below_speed_mask, buf_indices) >= 0.5
             })
 
     return segments

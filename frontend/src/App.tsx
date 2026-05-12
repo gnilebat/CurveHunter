@@ -44,6 +44,7 @@ export default function App() {
           onEndChange={setEnd}
           onOptionChange={setOption}
           onOptionsReset={() => setOptions(DEFAULT_ROUTE_OPTIONS)}
+          onOptionsApply={setOptions}
           onSwap={swap}
           onClear={clearAll}
           onRetry={retry}
@@ -59,6 +60,7 @@ export default function App() {
           followUser={nav.active}
           userPos={nav.userPos}
           dimUrbanSegments={options.ignoreUrbanCurves}
+          dimBelowSpeedSegments={options.minCurveSpeed > 0}
         />
         {nav.active && (
           <NavOverlay

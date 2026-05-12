@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
-import { DEFAULT_ROUTE_OPTIONS, MIN_CURVE_SPEED_STEPS } from '../types'
+import {
+  DEFAULT_ROUTE_OPTIONS, MIN_CURVE_SPEED_STEPS,
+  ROUTE_PRESETS, PRESET_ORDER, matchPreset, type PresetId
+} from '../types'
 import { SearchInput } from './SearchInput'
 import { Slider } from './Slider'
 import { StepSlider } from './StepSlider'
+import { InfoIcon } from './InfoIcon'
 import { useLocale } from '../i18n/LocaleProvider'
 import { LOCALES } from '../i18n/strings'
+import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
 import styles from './RoutePanel.module.css'
 
 interface Props {
@@ -19,10 +24,18 @@ interface Props {
   onEndChange: (wp: Waypoint | null) => void
   onOptionChange: <K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => void
   onOptionsReset: () => void
+  onOptionsApply: (opts: RouteOptions) => void
   onSwap: () => void
   onClear: () => void
   onRetry: () => void
   onStartNavigation: () => void
+}
+
+const PRESET_LABEL_KEY: Record<PresetId, string> = {
+  fastest: 'options.presetFastest',
+  curvy: 'options.presetCurvy',
+  curvyPlus: 'options.presetCurvyPlus',
+  curvyMax: 'options.presetCurvyMax'
 }
 
 function formatDistance(m: number, locale: string) {
@@ -43,9 +56,12 @@ function toWaypoint(r: SearchResult): Waypoint {
 export function RoutePanel({
   start, end, route, loading, error, options,
   onStartChange, onEndChange, onOptionChange, onOptionsReset,
+  onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation
 }: Props) {
+  const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
+  const { theme, setTheme } = useTheme()
   const [geoLoading, setGeoLoading] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(true)
 
@@ -147,6 +163,19 @@ export function RoutePanel({
 
         {optionsOpen && (
           <div className={styles.optionsBody}>
+            <div className={styles.presetRow} role="group">
+              {PRESET_ORDER.map((id) => (
+                <button
+                  key={id}
+                  className={`${styles.presetBtn} ${activePreset === id ? styles.presetActive : ''}`}
+                  onClick={() => onOptionsApply(ROUTE_PRESETS[id])}
+                  aria-pressed={activePreset === id}
+                >
+                  {t(PRESET_LABEL_KEY[id])}
+                </button>
+              ))}
+            </div>
+
             <Slider
               label={t('options.curviness')}
               hint={t('options.curvinessHint')}
@@ -178,15 +207,13 @@ export function RoutePanel({
                 checked={options.ignoreUrbanCurves}
                 onChange={(e) => onOptionChange('ignoreUrbanCurves', e.target.checked)}
               />
-              <div className={styles.toggleText}>
-                <span>{t('options.ignoreUrbanCurves')}</span>
-                <span className={styles.toggleHint}>{t('options.ignoreUrbanCurvesHint')}</span>
-              </div>
+              <span className={styles.toggleLabel}>{t('options.ignoreUrbanCurves')}</span>
+              <InfoIcon text={t('options.ignoreUrbanCurvesHint')} />
             </label>
 
             <StepSlider
               label={t('options.minCurveSpeed')}
-              hint={t('options.minCurveSpeedHint')}
+              tooltip={t('options.minCurveSpeedHint')}
               value={options.minCurveSpeed}
               steps={[...MIN_CURVE_SPEED_STEPS]}
               formatValue={(v) => v === 0 ? t('options.minCurveSpeedOff') : `≥ ${v} km/h`}
@@ -262,6 +289,21 @@ export function RoutePanel({
             </div>
           </div>
 
+          {(route.motorwayM > 0 || route.trunkM > 0) && (
+            <div className={styles.breakdown}>
+              <span className={styles.breakdownChip}>
+                <span className={styles.breakdownDot} style={{ background: '#1e3a8a' }} />
+                {t('panel.breakdownAutobahn')}
+                <b>{formatDistance(route.motorwayM, localeTag)}</b>
+              </span>
+              <span className={styles.breakdownChip}>
+                <span className={styles.breakdownDot} style={{ background: '#3b82f6' }} />
+                {t('panel.breakdownKraftfahrstrasse')}
+                <b>{formatDistance(route.trunkM, localeTag)}</b>
+              </span>
+            </div>
+          )}
+
           <button className={styles.navBtn} onClick={onStartNavigation}>
             {t('panel.startNavigation')}
           </button>
@@ -275,18 +317,36 @@ export function RoutePanel({
       )}
 
       <div className={styles.langRow}>
-        <span className={styles.langLabel}>{t('panel.language')}</span>
-        <div className={styles.langToggle} role="group">
-          {LOCALES.map((l) => (
-            <button
-              key={l}
-              className={`${styles.langBtn} ${locale === l ? styles.langBtnActive : ''}`}
-              onClick={() => setLocale(l)}
-              aria-pressed={locale === l}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
+        <div className={styles.settingsGroup}>
+          <span className={styles.langLabel}>{t('panel.language')}</span>
+          <div className={styles.langToggle} role="group">
+            {LOCALES.map((l) => (
+              <button
+                key={l}
+                className={`${styles.langBtn} ${locale === l ? styles.langBtnActive : ''}`}
+                onClick={() => setLocale(l)}
+                aria-pressed={locale === l}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.settingsGroup}>
+          <span className={styles.langLabel}>{t('panel.theme')}</span>
+          <div className={styles.langToggle} role="group">
+            {THEMES.map((th: Theme) => (
+              <button
+                key={th}
+                className={`${styles.langBtn} ${theme === th ? styles.langBtnActive : ''}`}
+                onClick={() => setTheme(th)}
+                aria-pressed={theme === th}
+                aria-label={t(th === 'light' ? 'panel.themeLight' : 'panel.themeDark')}
+              >
+                {th === 'light' ? '☀' : '☾'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -22,6 +22,8 @@ export const strings = {
       duration: 'Dauer',
       ascent: 'Höhenmeter',
       curviness: 'Kurvigkeit',
+      breakdownAutobahn: 'Autobahn',
+      breakdownKraftfahrstrasse: 'Kraftfahrstraße',
       clearAll: 'Alles löschen',
       startNavigation: '▶ Navigation starten',
       retry: 'Erneut versuchen',
@@ -34,10 +36,17 @@ export const strings = {
       curvyWinding: 'wellig',
       curvyCurvy: 'kurvig',
       curvyTwisty: 'sehr kurvig!',
-      language: 'Sprache'
+      language: 'Sprache',
+      theme: 'Design',
+      themeLight: 'Hell',
+      themeDark: 'Dunkel'
     },
     options: {
       title: 'Routenoptionen',
+      presetFastest: 'Schnellste Route',
+      presetCurvy: 'Kurven',
+      presetCurvyPlus: 'Kurven+',
+      presetCurvyMax: 'Kurven Max',
       curviness: 'Kurvigkeit',
       curvinessHint: 'Höhere Werte bevorzugen kurvigere, kleinere Straßen.',
       curvinessExtremeWarn: 'Über 100 % nimmt die Route erheblich längere Umwege für mehr Kurven in Kauf.',
@@ -48,7 +57,7 @@ export const strings = {
       ignoreUrbanCurves: 'Kurven Innerorts ignorieren',
       ignoreUrbanCurvesHint: 'Meidet Innerortsstraßen bei der Routenplanung und filtert sie aus dem Kurvigkeits-Score. Stapelt sich mit „Innerorts vermeiden".',
       minCurveSpeed: 'Mindesttempo für Kurven',
-      minCurveSpeedHint: 'Zählt Kurven nur auf Straßen mit mindestens diesem Tempolimit (unbekannte Limits zählen mit).',
+      minCurveSpeedHint: 'Meidet beim Routing Straßen unterhalb dieses Tempolimits und zählt sie nicht zum Kurvigkeits-Score. Straßen ohne Tempo-Angabe bleiben enthalten.',
       minCurveSpeedOff: 'aus',
       resetDefaults: 'Standardwerte'
     },
@@ -105,6 +114,8 @@ export const strings = {
       duration: 'Duration',
       ascent: 'Ascent',
       curviness: 'Curviness',
+      breakdownAutobahn: 'Motorway',
+      breakdownKraftfahrstrasse: 'Express road',
       clearAll: 'Clear all',
       startNavigation: '▶ Start navigation',
       retry: 'Retry',
@@ -117,10 +128,17 @@ export const strings = {
       curvyWinding: 'winding',
       curvyCurvy: 'curvy',
       curvyTwisty: 'twisty!',
-      language: 'Language'
+      language: 'Language',
+      theme: 'Theme',
+      themeLight: 'Light',
+      themeDark: 'Dark'
     },
     options: {
       title: 'Route options',
+      presetFastest: 'Fastest',
+      presetCurvy: 'Curves',
+      presetCurvyPlus: 'Curves+',
+      presetCurvyMax: 'Curves Max',
       curviness: 'Curviness',
       curvinessHint: 'Higher values prefer twistier, smaller roads.',
       curvinessExtremeWarn: 'Past 100% the route will accept significantly longer detours for more curves.',
@@ -131,7 +149,7 @@ export const strings = {
       ignoreUrbanCurves: 'Ignore urban curves',
       ignoreUrbanCurvesHint: 'Avoids urban roads during routing and filters them out of the curviness score. Stacks with "Avoid urban roads".',
       minCurveSpeed: 'Minimum speed for curves',
-      minCurveSpeedHint: 'Only counts curves on roads with at least this speed limit (untagged roads still count).',
+      minCurveSpeedHint: 'Avoids roads below this speed limit when routing and excludes them from the curviness score. Roads without a tagged speed still count.',
       minCurveSpeedOff: 'off',
       resetDefaults: 'Reset to defaults'
     },

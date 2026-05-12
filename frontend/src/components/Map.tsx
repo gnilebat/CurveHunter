@@ -4,6 +4,7 @@ import { Protocol } from 'pmtiles'
 import { layers, namedFlavor } from '@protomaps/basemaps'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useLocale } from '../i18n/LocaleProvider'
+import { useTheme } from '../theme/ThemeProvider'
 import type { Waypoint, RouteResult } from '../types'
 
 const TILES_URL = (import.meta.env.VITE_TILES_URL as string) || '/tiles/map.pmtiles'
@@ -11,11 +12,11 @@ const TILES_URL = (import.meta.env.VITE_TILES_URL as string) || '/tiles/map.pmti
 const protocol = new Protocol()
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol))
 
-function buildMapStyle(lang: string): maplibregl.StyleSpecification {
+function buildMapStyle(lang: string, theme: 'light' | 'dark'): maplibregl.StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-    sprite: 'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
+    sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`,
     sources: {
       protomaps: {
         type: 'vector',
@@ -23,7 +24,7 @@ function buildMapStyle(lang: string): maplibregl.StyleSpecification {
         attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a> contributors'
       }
     },
-    layers: layers('protomaps', namedFlavor('light'), { lang }) as maplibregl.LayerSpecification[]
+    layers: layers('protomaps', namedFlavor(theme), { lang }) as maplibregl.LayerSpecification[]
   }
 }
 
@@ -41,6 +42,7 @@ interface Props {
   followUser?: boolean
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
+  dimBelowSpeedSegments?: boolean
 }
 
 function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
@@ -52,7 +54,8 @@ function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
         properties: {
           score: seg.score,
           urban: seg.isUrban ? 1 : 0,
-          highway: seg.isHighway ? 1 : 0
+          highway: seg.isHighway ? 1 : 0,
+          slow: seg.isBelowSpeed ? 1 : 0
         },
         geometry: { type: 'LineString', coordinates: seg.coordinates }
       }))
@@ -62,7 +65,7 @@ function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
-      properties: { score: 0, urban: 0, highway: 0 },
+      properties: { score: 0, urban: 0, highway: 0, slow: 0 },
       geometry: route.geometry
     }]
   }
@@ -85,8 +88,12 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
   ]
 ] as maplibregl.ExpressionSpecification
 
-export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrbanSegments }: Props) {
+export function Map({
+  start, end, route, onMapClick, followUser, userPos,
+  dimUrbanSegments, dimBelowSpeedSegments
+}: Props) {
   const { locale } = useLocale()
+  const { theme } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const startMarker = useRef<maplibregl.Marker | null>(null)
@@ -98,7 +105,7 @@ export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrb
     if (!containerRef.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: buildMapStyle(locale),
+      style: buildMapStyle(locale, theme),
       center: [10.0, 51.0],
       zoom: 5
     })
@@ -143,11 +150,11 @@ export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrb
     return () => { map.remove(); mapRef.current = null }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Swap basemap language when locale changes
+  // Swap basemap when locale or theme changes
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    map.setStyle(buildMapStyle(locale))
+    map.setStyle(buildMapStyle(locale, theme))
     map.once('style.load', () => {
       if (map.getSource('route')) return
       map.addSource('route', {
@@ -177,7 +184,7 @@ export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrb
         src?.setData(buildRouteData(route))
       }
     })
-  }, [locale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [locale, theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const map = mapRef.current
@@ -207,23 +214,30 @@ export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrb
     endMarker.current = new maplibregl.Marker({ element: el }).setLngLat([end.lng, end.lat]).addTo(map)
   }, [end])
 
-  // Dim urban segments when the score-filter flag is on
+  // Dim segments excluded from the curviness score (urban / below-speed)
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     const apply = () => {
       if (!map.getLayer('route-line')) return
-      const urbanOpacity = dimUrbanSegments ? 0.25 : 0.95
-      map.setPaintProperty('route-line', 'line-opacity', [
-        'case', ['==', ['get', 'urban'], 1], urbanOpacity, 0.95
-      ])
-      map.setPaintProperty('route-casing', 'line-opacity', [
-        'case', ['==', ['get', 'urban'], 1], dimUrbanSegments ? 0.1 : 0.35, 0.35
-      ])
+      // A segment is "excluded" if EITHER active filter matches it
+      const dimUrban = dimUrbanSegments ? 1 : 0
+      const dimSlow = dimBelowSpeedSegments ? 1 : 0
+      const isDimmed: maplibregl.ExpressionSpecification = [
+        'any',
+        ['==', ['*', ['get', 'urban'], dimUrban], 1],
+        ['==', ['*', ['get', 'slow'], dimSlow], 1]
+      ]
+      map.setPaintProperty('route-line', 'line-opacity',
+        ['case', isDimmed, 0.25, 0.95] as maplibregl.ExpressionSpecification
+      )
+      map.setPaintProperty('route-casing', 'line-opacity',
+        ['case', isDimmed, 0.1, 0.35] as maplibregl.ExpressionSpecification
+      )
     }
     if (map.isStyleLoaded()) apply()
     else map.once('load', apply)
-  }, [dimUrbanSegments])
+  }, [dimUrbanSegments, dimBelowSpeedSegments])
 
   useEffect(() => {
     const map = mapRef.current

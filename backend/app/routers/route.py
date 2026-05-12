@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from app.services import graphhopper
 from app.services.curvature import (
     overall_curvature, segment_curvature,
-    build_urban_mask, build_highway_mask, build_speed_below_mask
+    build_urban_mask, build_highway_mask, build_speed_below_mask,
+    build_class_mask, length_in_mask_m
 )
 
 router = APIRouter()
@@ -36,6 +37,7 @@ class RouteSegment(BaseModel):
     length_km: float
     is_urban: bool = False
     is_highway: bool = False
+    is_below_speed: bool = False
 
 
 class Instruction(BaseModel):
@@ -53,6 +55,8 @@ class RouteResponse(BaseModel):
     duration_s: float
     ascent_m: float
     descent_m: float
+    motorway_m: float
+    trunk_m: float
     curvature_score: float | None
     segments: list[RouteSegment]
     instructions: list[Instruction]
@@ -69,7 +73,8 @@ async def plan_route(req: RouteRequest):
             avoid_motorways=req.options.avoid_motorways,
             avoid_trunks=req.options.avoid_trunks,
             avoid_urban=req.options.avoid_urban,
-            ignore_urban_curves=req.options.ignore_urban_curves
+            ignore_urban_curves=req.options.ignore_urban_curves,
+            min_curve_speed=req.options.min_curve_speed
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
@@ -93,6 +98,10 @@ async def plan_route(req: RouteRequest):
         n_coords=n,
         road_class_ranges=details.get("road_class", [])
     )
+    motorway_mask = build_class_mask(n, details.get("road_class", []), {"motorway"})
+    trunk_mask    = build_class_mask(n, details.get("road_class", []), {"trunk"})
+    motorway_m = length_in_mask_m(coords_2d, motorway_mask)
+    trunk_m    = length_in_mask_m(coords_2d, trunk_mask)
     speed_below_mask = build_speed_below_mask(
         n_coords=n,
         max_speed_ranges=details.get("max_speed", []),
@@ -114,7 +123,8 @@ async def plan_route(req: RouteRequest):
         coords_2d,
         window_m=500.0,
         urban_mask=urban_mask,
-        highway_mask=highway_mask
+        highway_mask=highway_mask,
+        below_speed_mask=speed_below_mask if req.options.min_curve_speed > 0 else None
     )
 
     instructions = [
@@ -135,6 +145,8 @@ async def plan_route(req: RouteRequest):
         duration_s=path.get("time", 0) / 1000,
         ascent_m=path.get("ascend", 0),
         descent_m=path.get("descend", 0),
+        motorway_m=motorway_m,
+        trunk_m=trunk_m,
         curvature_score=round(score, 1),
         segments=[RouteSegment(**s) for s in segments],
         instructions=instructions,

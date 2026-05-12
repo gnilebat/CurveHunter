@@ -11,7 +11,8 @@ def build_custom_model(
     avoid_motorways: float,
     avoid_trunks: float,
     avoid_urban: float,
-    ignore_urban_curves: bool
+    ignore_urban_curves: bool,
+    min_curve_speed: int
 ) -> dict[str, Any]:
     """Translate slider values (0.0–1.0) into a GraphHopper custom-model JSON."""
     priority: list[dict[str, Any]] = []
@@ -40,6 +41,15 @@ def build_custom_model(
         priority.append({"if": "road_class == LIVING_STREET",          "multiply_by": 0.1})
         priority.append({"if": "max_speed > 0 && max_speed <= 50",     "multiply_by": 0.5})
 
+    # "Mindesttempo für Kurven" — also push the router away from roads below the
+    # threshold so the route actually reflects the score-filter intent.
+    # Untagged roads (max_speed == 0) pass through unaffected, same as the score logic.
+    if min_curve_speed > 0:
+        priority.append({
+            "if": f"max_speed > 0 && max_speed < {int(min_curve_speed)}",
+            "multiply_by": 0.2
+        })
+
     if curviness > 0:
         # Split into "normal" (0..1) and "extended" (1..2) phases so the
         # extended range really pushes the router off bigger roads.
@@ -67,10 +77,11 @@ def build_custom_model(
     }
 
 
-def _is_default(curviness, avoid_motorways, avoid_trunks, avoid_urban, ignore_urban_curves) -> bool:
+def _is_default(curviness, avoid_motorways, avoid_trunks, avoid_urban,
+                ignore_urban_curves, min_curve_speed) -> bool:
     return (
         curviness == 0 and avoid_motorways == 0 and avoid_trunks == 0
-        and avoid_urban == 0 and not ignore_urban_curves
+        and avoid_urban == 0 and not ignore_urban_curves and min_curve_speed == 0
     )
 
 
@@ -81,10 +92,12 @@ async def route(
     avoid_motorways: float,
     avoid_trunks: float,
     avoid_urban: float,
-    ignore_urban_curves: bool
+    ignore_urban_curves: bool,
+    min_curve_speed: int
 ) -> dict[str, Any]:
     use_defaults = _is_default(
-        curviness, avoid_motorways, avoid_trunks, avoid_urban, ignore_urban_curves
+        curviness, avoid_motorways, avoid_trunks, avoid_urban,
+        ignore_urban_curves, min_curve_speed
     )
 
     payload: dict[str, Any] = {
@@ -103,7 +116,8 @@ async def route(
         payload["profile"] = "motorcycle_curvy"
         payload["ch.disable"] = True
         payload["custom_model"] = build_custom_model(
-            curviness, avoid_motorways, avoid_trunks, avoid_urban, ignore_urban_curves
+            curviness, avoid_motorways, avoid_trunks, avoid_urban,
+            ignore_urban_curves, min_curve_speed
         )
 
     async with httpx.AsyncClient(timeout=60) as client:
