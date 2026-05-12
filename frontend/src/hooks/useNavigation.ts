@@ -55,21 +55,30 @@ function closestVertex(coords: number[][], pt: [number, number]) {
 const OFF_ROUTE_THRESHOLD_M = 60   // beyond this distance from the route line
 const ARRIVAL_THRESHOLD_M = 30      // within this distance of the destination = arrived
 
-export function useNavigation(route: RouteResult | null, onCue?: (cue: NavCue) => void) {
+export function useNavigation(
+  route: RouteResult | null,
+  onCue?: (cue: NavCue) => void,
+  simulatedPos?: UserPosition | null
+) {
   const [active, setActive] = useState(false)
-  const [userPos, setUserPos] = useState<UserPosition | null>(null)
+  const [gpsPos, setGpsPos] = useState<UserPosition | null>(null)
+  const userPos: UserPosition | null = simulatedPos ?? gpsPos
   const watchId = useRef<number | null>(null)
+  const simulatedFlag = simulatedPos !== undefined && simulatedPos !== null
   const announcedRef = useRef<Set<string>>(new Set())
   // Keep a ref so the effect doesn't re-fire when the caller changes the callback identity.
   const onCueRef = useRef(onCue)
   useEffect(() => { onCueRef.current = onCue }, [onCue])
 
   const start = useCallback(() => {
-    if (!route || !navigator.geolocation) return
+    if (!route) return
     setActive(true)
+    // In simulator mode we get our position from the caller via simulatedPos
+    // and skip the real GPS watcher entirely.
+    if (simulatedFlag || !navigator.geolocation) return
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserPos({
+        setGpsPos({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           heading: pos.coords.heading,
@@ -79,7 +88,7 @@ export function useNavigation(route: RouteResult | null, onCue?: (cue: NavCue) =
       (err) => console.warn('Geolocation error:', err),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
     )
-  }, [route])
+  }, [route, simulatedFlag])
 
   const stop = useCallback(() => {
     if (watchId.current !== null) {
@@ -87,7 +96,7 @@ export function useNavigation(route: RouteResult | null, onCue?: (cue: NavCue) =
       watchId.current = null
     }
     setActive(false)
-    setUserPos(null)
+    setGpsPos(null)
   }, [])
 
   useEffect(() => () => {

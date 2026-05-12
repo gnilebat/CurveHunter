@@ -106,6 +106,18 @@ export const strings = {
       },
       unitM: 'Meter',
       unitKm: 'Kilometer',
+      debug: {
+        enable: 'Navigation simulieren (Debug)',
+        title: 'Debug-Navigation',
+        play: 'Abspielen',
+        pause: 'Pause',
+        step: '+ 100 m',
+        nextTurn: '→ Nächste Abzweigung',
+        reset: 'Zurücksetzen',
+        position: 'Position',
+        speed: 'Geschwindigkeit',
+        close: 'Schließen'
+      },
       verb: {
         continue: 'Weiter geradeaus',
         slightRight: 'Leicht rechts',
@@ -223,6 +235,18 @@ export const strings = {
       },
       unitM: 'metres',
       unitKm: 'kilometres',
+      debug: {
+        enable: 'Simulate navigation (debug)',
+        title: 'Debug navigation',
+        play: 'Play',
+        pause: 'Pause',
+        step: '+ 100 m',
+        nextTurn: '→ Next turn',
+        reset: 'Reset',
+        position: 'Position',
+        speed: 'Speed',
+        close: 'Close'
+      },
       verb: {
         continue: 'Continue',
         slightRight: 'Slight right',

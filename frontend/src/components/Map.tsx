@@ -314,7 +314,7 @@ export function Map({
       zoom: 16,
       pitch: 50,
       bearing: userPos.heading ?? 0,
-      duration: 800
+      duration: 200
     })
   }, [followUser, userPos])
 

@@ -30,6 +30,8 @@ interface Props {
   onRetry: () => void
   onStartNavigation: () => void
   anyWaypointSet: boolean
+  debugNav: boolean
+  onToggleDebugNav: (on: boolean) => void
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -60,7 +62,8 @@ export function RoutePanel({
   onOptionChange,
   onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation,
-  anyWaypointSet
+  anyWaypointSet,
+  debugNav, onToggleDebugNav
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -354,6 +357,15 @@ export function RoutePanel({
       {(anyWaypointSet || route) && (
         <button className={styles.clearBtn} onClick={onClear}>{t('panel.clearAll')}</button>
       )}
+
+      <label className={styles.toggle} style={{ fontSize: 12, opacity: 0.85 }}>
+        <input
+          type="checkbox"
+          checked={debugNav}
+          onChange={(e) => onToggleDebugNav(e.target.checked)}
+        />
+        <span className={styles.toggleLabel}>{t('nav.debug.enable')}</span>
+      </label>
 
       <div className={styles.langRow}>
         <div className={styles.settingsGroup}>
