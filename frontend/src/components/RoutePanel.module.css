@@ -8,10 +8,26 @@
   flex-direction: column;
   padding: 16px;
   gap: 14px;
+  /* Scroll the whole panel when content exceeds the viewport height. min-height
+     is needed because we're a flex child of a flex container; without it the
+     browser keeps us at content-height and overflow never triggers. */
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  min-height: 0;
   z-index: 10;
   box-shadow: 2px 0 8px var(--shadow);
   color: var(--text);
+}
+
+/* Children should size to content; the spacer (if present) takes any remaining
+   space. Stops Flexbox' default min-height: auto from preventing overflow. */
+.panel > * {
+  flex-shrink: 0;
+}
+
+@media (max-height: 720px) {
+  .panel { padding: 12px; gap: 10px; }
 }
 
 .header {
@@ -19,6 +35,22 @@
   align-items: center;
   gap: 8px;
 }
+
+.menuBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.menuBtn:hover { color: var(--accent); border-color: var(--accent); }
 
 .logoIcon { font-size: 22px; }
 
@@ -142,9 +174,115 @@
 }
 
 .presetRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+.presetRow .presetBtn {
+  flex: 1 1 calc(50% - 3px);
+  min-width: 0;
+}
+
+.customPresetWrap {
+  position: relative;
+  display: flex;
+  flex: 1 1 calc(50% - 3px);
+  min-width: 0;
+}
+
+.customPresetBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-right: 22px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.customStar {
+  color: #f59e0b;
+  font-size: 11px;
+}
+
+.presetActive .customStar { color: #fff; }
+
+.customPresetLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.customDeleteBtn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+.customDeleteBtn:hover {
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  opacity: 1;
+}
+
+.savePresetBtn {
+  flex: 0 0 auto;
+  width: 36px;
+  padding: 7px 0;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.savePresetBtn:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.routeActionsRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.routeActionsRow .navBtn { flex: 1; }
+
+.saveRouteBtn {
+  width: 44px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.saveRouteBtn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
 }
 
 .presetBtn {
@@ -182,19 +320,39 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 12px 14px;
   background: transparent;
   border: none;
+  border-left: 3px solid #2563eb;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  transition: background 0.15s;
 }
 
 .optionsHead:hover { background: var(--bg-hover); }
+
+.optionsGear {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.optionsTitle {
+  flex: 1;
+  text-align: left;
+}
 
 .optionsChevron {
   font-size: 11px;
@@ -204,7 +362,6 @@
 }
 
 .optionsBadge {
-  margin-left: auto;
   color: var(--accent);
   font-size: 10px;
 }

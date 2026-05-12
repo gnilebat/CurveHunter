@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
 import type { RouteError } from '../hooks/useRoute'
+import type { CustomPreset } from '../hooks/useCustomPresets'
 import {
   MIN_CURVE_SPEED_STEPS,
   ROUTE_PRESETS, PRESET_ORDER, matchPreset, type PresetId
@@ -32,6 +33,16 @@ interface Props {
   anyWaypointSet: boolean
   debugNav: boolean
   onToggleDebugNav: (on: boolean) => void
+
+  customPresets: CustomPreset[]
+  activeCustomPresetId: string | null
+  onApplyCustomPreset: (p: CustomPreset) => void
+  onDeleteCustomPreset: (p: CustomPreset) => void
+
+  onOpenMenu: () => void
+  onSavePlace: () => void
+  onSaveRoute: () => void
+  onSavePreset: () => void
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -63,7 +74,10 @@ export function RoutePanel({
   onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation,
   anyWaypointSet,
-  debugNav, onToggleDebugNav
+  debugNav, onToggleDebugNav,
+  customPresets, activeCustomPresetId,
+  onApplyCustomPreset, onDeleteCustomPreset,
+  onOpenMenu, onSavePlace, onSaveRoute, onSavePreset
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -116,6 +130,18 @@ export function RoutePanel({
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
+        <button
+          className={styles.menuBtn}
+          onClick={onOpenMenu}
+          title={t('save.menuTitle')}
+          aria-label={t('save.menuTitle')}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
         <span className={styles.logoIcon}>⛰</span>
         <span className={styles.logoText}>{t('panel.brand')}</span>
       </header>
@@ -137,33 +163,52 @@ export function RoutePanel({
                   onClear={() => onWaypointChange(idx, null)}
                 />
                 {isFirst ? (
-                  <button
-                    className={styles.iconBtn}
-                    title={t('panel.useMyLocation')}
-                    onClick={useMyLocation}
-                    disabled={geoLoading}
-                    aria-label={t('panel.useMyLocation')}
-                  >
-                    {geoLoading ? '…' : (
+                  <>
+                    <button
+                      className={styles.iconBtn}
+                      title={t('panel.useMyLocation')}
+                      onClick={useMyLocation}
+                      disabled={geoLoading}
+                      aria-label={t('panel.useMyLocation')}
+                    >
+                      {geoLoading ? '…' : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                          <circle cx="12" cy="12" r="7" />
+                          <line x1="12" y1="2" x2="12" y2="5" />
+                          <line x1="12" y1="19" x2="12" y2="22" />
+                          <line x1="2" y1="12" x2="5" y2="12" />
+                          <line x1="19" y1="12" x2="22" y2="12" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      className={styles.iconBtn}
+                      title={t('panel.savePlace')}
+                      onClick={onSavePlace}
+                      disabled={!wp}
+                      aria-label={t('panel.savePlace')}
+                    >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-                        <circle cx="12" cy="12" r="7" />
-                        <line x1="12" y1="2" x2="12" y2="5" />
-                        <line x1="12" y1="19" x2="12" y2="22" />
-                        <line x1="2" y1="12" x2="5" y2="12" />
-                        <line x1="19" y1="12" x2="22" y2="12" />
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                       </svg>
-                    )}
-                  </button>
+                    </button>
+                  </>
                 ) : isIntermediate ? (
-                  <button
-                    className={styles.iconBtn}
-                    title={t('panel.removeVia')}
-                    onClick={() => onRemove(idx)}
-                    aria-label={t('panel.removeVia')}
-                  >×</button>
+                  <>
+                    <button
+                      className={styles.iconBtn}
+                      title={t('panel.removeVia')}
+                      onClick={() => onRemove(idx)}
+                      aria-label={t('panel.removeVia')}
+                    >×</button>
+                    <span className={styles.iconBtnPlaceholder} />
+                  </>
                 ) : (
-                  <span className={styles.iconBtnPlaceholder} />
+                  <>
+                    <span className={styles.iconBtnPlaceholder} />
+                    <span className={styles.iconBtnPlaceholder} />
+                  </>
                 )}
               </div>
               {!isLast && (
@@ -190,13 +235,41 @@ export function RoutePanel({
         {PRESET_ORDER.map((id) => (
           <button
             key={id}
-            className={`${styles.presetBtn} ${activePreset === id ? styles.presetActive : ''}`}
+            className={`${styles.presetBtn} ${activePreset === id && !activeCustomPresetId ? styles.presetActive : ''}`}
             onClick={() => onOptionsApply(ROUTE_PRESETS[id])}
-            aria-pressed={activePreset === id}
+            aria-pressed={activePreset === id && !activeCustomPresetId}
           >
             {t(PRESET_LABEL_KEY[id])}
           </button>
         ))}
+        {customPresets.map((p) => {
+          const isActive = activeCustomPresetId === p.id
+          return (
+            <div key={p.id} className={styles.customPresetWrap}>
+              <button
+                className={`${styles.presetBtn} ${styles.customPresetBtn} ${isActive ? styles.presetActive : ''}`}
+                onClick={() => onApplyCustomPreset(p)}
+                aria-pressed={isActive}
+                title={p.name}
+              >
+                <span className={styles.customStar} aria-hidden>★</span>
+                <span className={styles.customPresetLabel}>{p.name}</span>
+              </button>
+              <button
+                className={styles.customDeleteBtn}
+                onClick={(e) => { e.stopPropagation(); onDeleteCustomPreset(p) }}
+                aria-label={t('save.delete')}
+                title={t('save.delete')}
+              >×</button>
+            </div>
+          )
+        })}
+        <button
+          className={styles.savePresetBtn}
+          onClick={onSavePreset}
+          title={t('panel.savePreset')}
+          aria-label={t('panel.savePreset')}
+        >+ ★</button>
       </div>
 
       <section className={styles.options}>
@@ -205,9 +278,15 @@ export function RoutePanel({
           onClick={() => setOptionsOpen(!optionsOpen)}
           aria-expanded={optionsOpen}
         >
-          <span className={styles.optionsChevron}>{optionsOpen ? '▾' : '▸'}</span>
-          <span>{t('options.title')}</span>
+          <span className={styles.optionsGear} aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </span>
+          <span className={styles.optionsTitle}>{t('options.title')}</span>
           {isCustomized && <span className={styles.optionsBadge}>●</span>}
+          <span className={styles.optionsChevron}>{optionsOpen ? '▾' : '▸'}</span>
         </button>
 
         {optionsOpen && (
@@ -346,9 +425,21 @@ export function RoutePanel({
             </div>
           )}
 
-          <button className={styles.navBtn} onClick={onStartNavigation}>
-            {t('panel.startNavigation')}
-          </button>
+          <div className={styles.routeActionsRow}>
+            <button className={styles.navBtn} onClick={onStartNavigation}>
+              {t('panel.startNavigation')}
+            </button>
+            <button
+              className={styles.saveRouteBtn}
+              onClick={onSaveRoute}
+              title={t('panel.saveRoute')}
+              aria-label={t('panel.saveRoute')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+          </div>
         </>
       )}
 

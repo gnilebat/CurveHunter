@@ -1,19 +1,37 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Map } from './components/Map'
 import { RoutePanel } from './components/RoutePanel'
 import { NavOverlay } from './components/NavOverlay'
 import { NavDebugPanel } from './components/NavDebugPanel'
+import { SaveMenu } from './components/SaveMenu'
+import { PromptDialog } from './components/PromptDialog'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { useRoute } from './hooks/useRoute'
 import { useNavigation, type NavCue } from './hooks/useNavigation'
 import { useNavDebug } from './hooks/useNavDebug'
 import { useWakeLock } from './hooks/useWakeLock'
+import { useSavedRoutes, type SavedRoute } from './hooks/useSavedRoutes'
+import { useCustomPresets, type CustomPreset } from './hooks/useCustomPresets'
+import { useSavedPlaces, type SavedPlace } from './hooks/useSavedPlaces'
 import { useTTS } from './tts/useTTS'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
-import type { Waypoint } from './types'
+import type { Waypoint, RouteOptions } from './types'
 import './App.css'
 
 const DEBUG_NAV_KEY = 'curvehunter.debug.nav'
+
+function sameOptions(a: RouteOptions, b: RouteOptions): boolean {
+  return (
+    a.curviness === b.curviness &&
+    a.avoidMotorways === b.avoidMotorways &&
+    a.avoidTrunks === b.avoidTrunks &&
+    a.avoidUrban === b.avoidUrban &&
+    a.ignoreUrbanCurves === b.ignoreUrbanCurves &&
+    a.minCurveSpeed === b.minCurveSpeed &&
+    a.avoidUnpaved === b.avoidUnpaved
+  )
+}
 
 function roundDistance(m: number): { value: number; unit: 'm' | 'km' } {
   if (m >= 1000) {
@@ -45,6 +63,74 @@ export default function App() {
     try { localStorage.setItem(DEBUG_NAV_KEY, on ? 'true' : 'false') } catch { /* ignore */ }
   }, [])
   const debug = useNavDebug(route, debugNav)
+
+  const savedRoutes = useSavedRoutes()
+  const customPresets = useCustomPresets()
+  const savedPlaces = useSavedPlaces()
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [pendingSave, setPendingSave] = useState<
+    | { kind: 'place'; lat: number; lng: number; defaultName: string }
+    | { kind: 'route' }
+    | { kind: 'preset' }
+    | null
+  >(null)
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: 'preset'; entry: CustomPreset }
+    | null
+  >(null)
+
+  // Match the current options against saved custom presets to highlight the active one.
+  const activeCustomPresetId = useMemo<string | null>(() => {
+    const match = customPresets.presets.find(p => sameOptions(p.options, options))
+    return match?.id ?? null
+  }, [customPresets.presets, options])
+
+  const handleSavePlace = useCallback(() => {
+    const wp = waypoints[0]
+    if (!wp) return
+    setPendingSave({ kind: 'place', lat: wp.lat, lng: wp.lng, defaultName: wp.name })
+  }, [waypoints])
+
+  const handleSaveRoute = useCallback(() => {
+    if (!route) return
+    setPendingSave({ kind: 'route' })
+  }, [route])
+
+  const handleSavePreset = useCallback(() => {
+    setPendingSave({ kind: 'preset' })
+  }, [])
+
+  const handleConfirmSave = useCallback((name: string) => {
+    if (!pendingSave) return
+    if (pendingSave.kind === 'place') {
+      savedPlaces.save(name, pendingSave.lat, pendingSave.lng)
+    } else if (pendingSave.kind === 'route') {
+      const wps = waypoints.filter((w): w is Waypoint => w !== null)
+      if (wps.length >= 2) savedRoutes.save(name, wps, options)
+    } else if (pendingSave.kind === 'preset') {
+      customPresets.save(name, options)
+    }
+    setPendingSave(null)
+  }, [pendingSave, waypoints, options, savedRoutes, savedPlaces, customPresets])
+
+  const applySavedRoute = useCallback((r: SavedRoute) => {
+    clearAll()
+    // Replace all waypoints in one go — setWaypoint operates by index, so we
+    // need to make room first. clearAll() resets to [null, null]; insertAfter
+    // pads up to the right length.
+    setTimeout(() => {
+      for (let i = 2; i < r.waypoints.length; i++) insertWaypointAfter(i - 1)
+      r.waypoints.forEach((w, i) => setWaypoint(i, w))
+      setOptions(r.options)
+    }, 0)
+  }, [clearAll, insertWaypointAfter, setWaypoint, setOptions])
+
+  const applySavedPlace = useCallback((p: SavedPlace) => {
+    const emptyIdx = waypoints.findIndex(w => w === null)
+    const target = emptyIdx >= 0 ? emptyIdx : 0
+    setWaypoint(target, { lat: p.lat, lng: p.lng, name: p.name })
+  }, [waypoints, setWaypoint])
 
   const composeCue = useCallback((cue: NavCue): string | null => {
     if (cue.kind === 'arrive') return t('nav.cue.arrive')
@@ -126,6 +212,14 @@ export default function App() {
           anyWaypointSet={anyWaypointSet}
           debugNav={debugNav}
           onToggleDebugNav={setDebugNav}
+          customPresets={customPresets.presets}
+          activeCustomPresetId={activeCustomPresetId}
+          onApplyCustomPreset={(p) => setOptions(p.options)}
+          onDeleteCustomPreset={(p) => setPendingDelete({ kind: 'preset', entry: p })}
+          onOpenMenu={() => setMenuOpen(true)}
+          onSavePlace={handleSavePlace}
+          onSaveRoute={handleSaveRoute}
+          onSavePreset={handleSavePreset}
         />
       )}
       <div className="map-wrap">
@@ -171,6 +265,54 @@ export default function App() {
           />
         )}
       </div>
+
+      <SaveMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        routes={savedRoutes.routes}
+        presets={customPresets.presets}
+        places={savedPlaces.places}
+        onApplyRoute={applySavedRoute}
+        onApplyPreset={(p) => setOptions(p.options)}
+        onApplyPlace={applySavedPlace}
+        onRenameRoute={savedRoutes.rename}
+        onRenamePreset={customPresets.rename}
+        onRenamePlace={savedPlaces.rename}
+        onDeleteRoute={savedRoutes.remove}
+        onDeletePreset={customPresets.remove}
+        onDeletePlace={savedPlaces.remove}
+      />
+
+      <PromptDialog
+        open={pendingSave !== null}
+        title={
+          pendingSave?.kind === 'place' ? t('save.placeTitle')
+          : pendingSave?.kind === 'route' ? t('save.routeTitle')
+          : pendingSave?.kind === 'preset' ? t('save.presetTitle')
+          : ''
+        }
+        label={t('save.nameLabel')}
+        initialValue={
+          pendingSave?.kind === 'place' ? pendingSave.defaultName : ''
+        }
+        onCancel={() => setPendingSave(null)}
+        onConfirm={handleConfirmSave}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete?.kind === 'preset'}
+        title={t('save.deleteTitle')}
+        message={t('save.deleteConfirm', { name: pendingDelete?.entry.name ?? '' })}
+        destructive
+        confirmLabel={t('save.delete')}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete?.kind === 'preset') {
+            customPresets.remove(pendingDelete.entry.id)
+          }
+          setPendingDelete(null)
+        }}
+      />
     </div>
   )
 }
