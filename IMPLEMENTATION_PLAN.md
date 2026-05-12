@@ -18,6 +18,10 @@ Fully self-hosted. No free tiers, no trial APIs, no third-party services that ca
 
 ---
 
+## Localisation
+
+The UI defaults to German with English available as a runtime toggle. The map basemap labels follow the same locale via `@protomaps/basemaps`' `lang` option. Strings live in a single catalogue (`frontend/src/i18n/strings.ts`) — German is the source of truth. Adding a new language is one entry in that file. The selected locale persists in `localStorage`. OSM road names on the map render in their tagged language (typically German for Germany) regardless of UI locale, because that's the underlying data.
+
 ## Tech Stack (fully self-hosted)
 
 | Layer | Technology | Why |

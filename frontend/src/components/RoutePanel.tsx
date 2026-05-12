@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Waypoint, RouteResult, SearchResult } from '../types'
 import { SearchInput } from './SearchInput'
+import { useLocale } from '../i18n/LocaleProvider'
+import { LOCALES } from '../i18n/strings'
 import styles from './RoutePanel.module.css'
 
 interface Props {
@@ -19,22 +21,15 @@ interface Props {
   onStartNavigation: () => void
 }
 
-function formatDistance(m: number) {
-  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`
+function formatDistance(m: number, locale: string) {
+  if (m >= 1000) return `${(m / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} km`
+  return `${Math.round(m)} m`
 }
 
-function formatDuration(s: number) {
+function formatDuration(s: number, hShort: string, minShort: string) {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
-  return h > 0 ? `${h}h ${m}min` : `${m} min`
-}
-
-function curvyLabel(score: number | null) {
-  if (score === null) return '—'
-  if (score < 100) return `${Math.round(score)} (straight)`
-  if (score < 400) return `${Math.round(score)} (winding)`
-  if (score < 800) return `${Math.round(score)} (curvy)`
-  return `${Math.round(score)} (twisty!)`
+  return h > 0 ? `${h} ${hShort} ${m} ${minShort}` : `${m} ${minShort}`
 }
 
 function toWaypoint(r: SearchResult): Waypoint {
@@ -46,6 +41,7 @@ export function RoutePanel({
   onStartChange, onEndChange, onPreferCurvyChange,
   onSwap, onClear, onRetry, onStartNavigation
 }: Props) {
+  const { t, locale, setLocale } = useLocale()
   const [geoLoading, setGeoLoading] = useState(false)
 
   function useMyLocation() {
@@ -56,7 +52,7 @@ export function RoutePanel({
         onStartChange({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          name: 'My location'
+          name: t('panel.useMyLocation')
         })
         setGeoLoading(false)
       },
@@ -65,20 +61,29 @@ export function RoutePanel({
     )
   }
 
+  function curvyLabel(score: number | null) {
+    if (score === null) return '—'
+    if (score < 100) return `${Math.round(score)} (${t('panel.curvyStraight')})`
+    if (score < 400) return `${Math.round(score)} (${t('panel.curvyWinding')})`
+    if (score < 800) return `${Math.round(score)} (${t('panel.curvyCurvy')})`
+    return `${Math.round(score)} (${t('panel.curvyTwisty')})`
+  }
+
   const bothSet = start !== null && end !== null
+  const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
 
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
         <span className={styles.logoIcon}>⛰</span>
-        <span className={styles.logoText}>CurveHunter</span>
+        <span className={styles.logoText}>{t('panel.brand')}</span>
       </header>
 
       <div className={styles.inputsBlock}>
         <div className={styles.inputRow}>
           <span className={styles.dot} style={{ background: '#22c55e' }} />
           <SearchInput
-            placeholder="Start point"
+            placeholder={t('panel.placeholderStart')}
             value={start?.name ?? ''}
             isSelected={start !== null}
             onChange={(r) => onStartChange(toWaypoint(r))}
@@ -86,10 +91,10 @@ export function RoutePanel({
           />
           <button
             className={styles.iconBtn}
-            title="Use my location"
+            title={t('panel.useMyLocation')}
             onClick={useMyLocation}
             disabled={geoLoading}
-            aria-label="Use my location"
+            aria-label={t('panel.useMyLocation')}
           >
             {geoLoading ? '…' : '⌖'}
           </button>
@@ -99,14 +104,14 @@ export function RoutePanel({
           className={styles.swapBtn}
           onClick={onSwap}
           disabled={!start && !end}
-          title="Swap start and destination"
-          aria-label="Swap"
+          title={t('panel.swap')}
+          aria-label={t('panel.swap')}
         >⇅</button>
 
         <div className={styles.inputRow}>
           <span className={styles.dot} style={{ background: '#ef4444' }} />
           <SearchInput
-            placeholder="Destination"
+            placeholder={t('panel.placeholderEnd')}
             value={end?.name ?? ''}
             isSelected={end !== null}
             onChange={(r) => onEndChange(toWaypoint(r))}
@@ -122,7 +127,7 @@ export function RoutePanel({
           checked={preferCurvy}
           onChange={(e) => onPreferCurvyChange(e.target.checked)}
         />
-        <span>Prefer curvy roads</span>
+        <span>{t('panel.preferCurvy')}</span>
       </label>
 
       <button
@@ -130,19 +135,21 @@ export function RoutePanel({
         onClick={onRetry}
         disabled={!bothSet || loading}
       >
-        {loading ? 'Calculating…' : route ? 'Recalculate route' : 'Find route'}
+        {loading
+          ? t('panel.calculating')
+          : route
+            ? t('panel.recalculate')
+            : t('panel.findRoute')}
       </button>
 
       {!bothSet && !error && (
-        <p className={styles.hint}>
-          Pick a start and destination — or click anywhere on the map to drop a pin.
-        </p>
+        <p className={styles.hint}>{t('panel.hint')}</p>
       )}
 
       {error && (
         <div className={styles.error}>
           <span>{error}</span>
-          <button className={styles.retryLink} onClick={onRetry}>Retry</button>
+          <button className={styles.retryLink} onClick={onRetry}>{t('panel.retry')}</button>
         </div>
       )}
 
@@ -151,32 +158,34 @@ export function RoutePanel({
           <div className={styles.legend}>
             <div className={styles.legendBar} />
             <div className={styles.legendLabels}>
-              <span>straight</span>
-              <span>twisty</span>
+              <span>{t('panel.legendStraight')}</span>
+              <span>{t('panel.legendTwisty')}</span>
             </div>
           </div>
 
           <div className={styles.stats}>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>Distance</span>
-              <span className={styles.statValue}>{formatDistance(route.distanceM)}</span>
+              <span className={styles.statLabel}>{t('panel.distance')}</span>
+              <span className={styles.statValue}>{formatDistance(route.distanceM, localeTag)}</span>
             </div>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>Duration</span>
-              <span className={styles.statValue}>{formatDuration(route.durationS)}</span>
+              <span className={styles.statLabel}>{t('panel.duration')}</span>
+              <span className={styles.statValue}>
+                {formatDuration(route.durationS, t('nav.hourShort'), t('nav.minShort'))}
+              </span>
             </div>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>Ascent</span>
+              <span className={styles.statLabel}>{t('panel.ascent')}</span>
               <span className={styles.statValue}>{Math.round(route.ascentM)} m</span>
             </div>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>Curviness</span>
+              <span className={styles.statLabel}>{t('panel.curviness')}</span>
               <span className={styles.statValue}>{curvyLabel(route.curvatureScore)}</span>
             </div>
           </div>
 
           <button className={styles.navBtn} onClick={onStartNavigation}>
-            ▶ Start navigation
+            {t('panel.startNavigation')}
           </button>
         </>
       )}
@@ -184,11 +193,28 @@ export function RoutePanel({
       <div className={styles.spacer} />
 
       {(start || end || route) && (
-        <button className={styles.clearBtn} onClick={onClear}>Clear all</button>
+        <button className={styles.clearBtn} onClick={onClear}>{t('panel.clearAll')}</button>
       )}
 
+      <div className={styles.langRow}>
+        <span className={styles.langLabel}>{t('panel.language')}</span>
+        <div className={styles.langToggle} role="group">
+          {LOCALES.map((l) => (
+            <button
+              key={l}
+              className={`${styles.langBtn} ${locale === l ? styles.langBtnActive : ''}`}
+              onClick={() => setLocale(l)}
+              aria-pressed={locale === l}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <footer className={styles.footer}>
-        © <a href="https://openstreetmap.org" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors
+        © <a href="https://openstreetmap.org" target="_blank" rel="noreferrer">OpenStreetMap</a>
+        {' '}{locale === 'de' ? 'Mitwirkende' : 'contributors'}
       </footer>
     </aside>
   )

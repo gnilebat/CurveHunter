@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { searchPlaces } from '../api/client'
+import { useT } from '../i18n/LocaleProvider'
 import type { SearchResult } from '../types'
 import styles from './SearchInput.module.css'
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function SearchInput({ placeholder, value, isSelected, onChange, onClear }: Props) {
+  const t = useT()
   const [query, setQuery] = useState(value)
   const [results, setResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
@@ -114,13 +116,13 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
         spellCheck={false}
       />
 
-      {loading && <span className={styles.spinner} aria-label="Searching" />}
+      {loading && <span className={styles.spinner} aria-label={t('search.searching')} />}
 
       {!loading && query.length > 0 && (
         <button
           type="button"
           className={styles.clearBtn}
-          aria-label="Clear"
+          aria-label={t('search.clear')}
           onMouseDown={(e) => { e.preventDefault(); handleClear() }}
         >×</button>
       )}
@@ -128,7 +130,7 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
       {showDropdown && (
         <ul ref={listRef} className={styles.dropdown}>
           {results.length === 0 && !loading && (
-            <li className={styles.empty}>No matches for "{query}"</li>
+            <li className={styles.empty}>{t('search.noMatches', { query })}</li>
           )}
           {results.map((r, i) => (
             <li

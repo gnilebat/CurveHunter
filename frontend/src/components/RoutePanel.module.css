@@ -265,6 +265,50 @@
   color: #ef4444;
 }
 
+.langRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.langLabel {
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.langToggle {
+  display: flex;
+  gap: 2px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.langBtn {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+}
+
+.langBtn:hover { color: #374151; }
+
+.langBtnActive {
+  background: #fff;
+  color: #f97316;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
 .footer {
   font-size: 11px;
   color: #9ca3af;

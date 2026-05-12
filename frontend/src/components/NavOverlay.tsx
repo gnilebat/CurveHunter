@@ -1,5 +1,6 @@
 import type { Instruction } from '../types'
 import { ManeuverIcon } from './ManeuverIcon'
+import { useLocale } from '../i18n/LocaleProvider'
 import styles from './NavOverlay.module.css'
 
 interface Props {
@@ -15,49 +16,25 @@ interface Props {
   onRecalculate: () => void
 }
 
-function formatNavDistance(m: number) {
-  if (m < 50) return 'Now'
-  if (m < 1000) return `${Math.round(m / 10) * 10} m`
-  if (m < 10_000) return `${(m / 1000).toFixed(1)} km`
-  return `${Math.round(m / 1000)} km`
-}
-
-function formatTotalDistance(m: number) {
-  if (m < 1000) return `${Math.round(m)} m`
-  if (m < 10_000) return `${(m / 1000).toFixed(1)} km`
-  return `${Math.round(m / 1000)} km`
-}
-
-function formatDuration(s: number) {
-  if (s < 60) return '< 1 min'
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  return h > 0 ? `${h} h ${m} min` : `${m} min`
-}
-
-function formatETA(durationS: number) {
-  const arrival = new Date(Date.now() + durationS * 1000)
-  return arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-function turnVerb(sign: number): string {
-  switch (Math.abs(sign === 98 ? 8 : sign)) {
-    case 0: return 'Continue'
-    case 1: return sign > 0 ? 'Slight right' : 'Slight left'
-    case 2: return sign > 0 ? 'Turn right' : 'Turn left'
-    case 3: return sign > 0 ? 'Sharp right' : 'Sharp left'
-    case 4: return 'Arrive'
-    case 6: return 'Take roundabout'
-    case 7: return sign > 0 ? 'Keep right' : 'Keep left'
-    case 8: return 'Make a U-turn'
-    default: return 'Continue'
+// GraphHopper sign → translation key under `nav.verb`
+function verbKey(sign: number): string {
+  const abs = Math.abs(sign === 98 ? 8 : sign)
+  switch (abs) {
+    case 0: return 'continue'
+    case 1: return sign > 0 ? 'slightRight' : 'slightLeft'
+    case 2: return sign > 0 ? 'turnRight' : 'turnLeft'
+    case 3: return sign > 0 ? 'sharpRight' : 'sharpLeft'
+    case 4: return 'arrive'
+    case 6: return 'roundabout'
+    case 7: return sign > 0 ? 'keepRight' : 'keepLeft'
+    case 8: return 'uTurn'
+    default: return 'continue'
   }
 }
 
-// Use street_name if available, otherwise derive from instruction text.
 function streetFromInstruction(ins: Instruction): string | null {
   if (ins.streetName && ins.streetName.length > 0) return ins.streetName
-  const m = ins.text.match(/onto (.+?)(?:$|,)/i)
+  const m = ins.text.match(/onto (.+?)(?:$|,)/i) || ins.text.match(/auf (.+?)(?:$|,)/i)
   return m ? m[1] : null
 }
 
@@ -66,6 +43,35 @@ export function NavOverlay({
   distanceToNextTurnM, distanceRemainingM, durationRemainingS, speedMs,
   offRoute, arrived, onStop, onRecalculate
 }: Props) {
+  const { t, locale } = useLocale()
+  const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
+
+  function formatNavDistance(m: number) {
+    if (m < 50) return t('nav.now')
+    if (m < 1000) return `${Math.round(m / 10) * 10} m`
+    if (m < 10_000) return `${(m / 1000).toLocaleString(localeTag, { maximumFractionDigits: 1 })} km`
+    return `${Math.round(m / 1000)} km`
+  }
+
+  function formatTotalDistance(m: number) {
+    if (m < 1000) return `${Math.round(m)} m`
+    if (m < 10_000) return `${(m / 1000).toLocaleString(localeTag, { maximumFractionDigits: 1 })} km`
+    return `${Math.round(m / 1000)} km`
+  }
+
+  function formatDuration(s: number) {
+    if (s < 60) return t('nav.lessThanMin')
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    return h > 0
+      ? `${h} ${t('nav.hourShort')} ${m} ${t('nav.minShort')}`
+      : `${m} ${t('nav.minShort')}`
+  }
+
+  function formatETA(durationS: number) {
+    const arrival = new Date(Date.now() + durationS * 1000)
+    return arrival.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })
+  }
 
   if (arrived) {
     return (
@@ -74,15 +80,15 @@ export function NavOverlay({
           <div className={styles.primary}>
             <div className={styles.iconWrap}><ManeuverIcon sign={4} size={56} /></div>
             <div className={styles.primaryText}>
-              <div className={styles.bigLine}>You've arrived</div>
-              <div className={styles.smallLine}>End of route</div>
+              <div className={styles.bigLine}>{t('nav.arrived')}</div>
+              <div className={styles.smallLine}>{t('nav.destinationReached')}</div>
             </div>
           </div>
         </div>
         <div className={styles.bottomPanel}>
           <div className={styles.eta}>
             <span className={styles.etaTime}>—</span>
-            <span className={styles.etaSub}>Destination reached</span>
+            <span className={styles.etaSub}>{t('nav.endOfRoute')}</span>
           </div>
           <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
         </div>
@@ -91,7 +97,9 @@ export function NavOverlay({
   }
 
   const street = currentInstruction ? streetFromInstruction(currentInstruction) : null
-  const verb = currentInstruction ? turnVerb(currentInstruction.sign) : 'Continue'
+  const verb = currentInstruction
+    ? t(`nav.verb.${verbKey(currentInstruction.sign)}`)
+    : t('nav.verb.continue')
   const speedKmh = speedMs !== null && speedMs > 0.5 ? Math.round(speedMs * 3.6) : null
 
   return (
@@ -105,7 +113,10 @@ export function NavOverlay({
             <div className={styles.bigLine}>{formatNavDistance(distanceToNextTurnM)}</div>
             <div className={styles.smallLine}>
               <span className={styles.verb}>{verb}</span>
-              {street && <span className={styles.street}> onto {street}</span>}
+              {street && (
+                <span className={styles.street}> {t('nav.onto')} {street}</span>
+              )}
+              {!currentInstruction && <span>{t('nav.locating')}</span>}
             </div>
           </div>
         </div>
@@ -115,11 +126,11 @@ export function NavOverlay({
             <div className={styles.thenIcon}>
               <ManeuverIcon sign={nextInstruction.sign} size={22} />
             </div>
-            <span className={styles.thenLabel}>Then</span>
+            <span className={styles.thenLabel}>{t('nav.then')}</span>
             <span className={styles.thenText}>
-              {turnVerb(nextInstruction.sign)}
+              {t(`nav.verb.${verbKey(nextInstruction.sign)}`)}
               {streetFromInstruction(nextInstruction) && (
-                <> onto <b>{streetFromInstruction(nextInstruction)}</b></>
+                <> {t('nav.onto')} <b>{streetFromInstruction(nextInstruction)}</b></>
               )}
             </span>
           </div>
@@ -128,15 +139,15 @@ export function NavOverlay({
 
       {offRoute && (
         <div className={styles.offRoute}>
-          <span>You're off the route</span>
-          <button className={styles.recalcBtn} onClick={onRecalculate}>Recalculate</button>
+          <span>{t('nav.offRoute')}</span>
+          <button className={styles.recalcBtn} onClick={onRecalculate}>{t('nav.recalculate')}</button>
         </div>
       )}
 
       {speedKmh !== null && (
         <div className={styles.speedBadge}>
           <span className={styles.speedNum}>{speedKmh}</span>
-          <span className={styles.speedUnit}>km/h</span>
+          <span className={styles.speedUnit}>{t('nav.unitKmh')}</span>
         </div>
       )}
 
@@ -144,7 +155,8 @@ export function NavOverlay({
         <div className={styles.eta}>
           <span className={styles.etaTime}>{formatDuration(durationRemainingS)}</span>
           <span className={styles.etaSub}>
-            {formatTotalDistance(distanceRemainingM)} · ETA {formatETA(durationRemainingS)}
+            {t('nav.remaining', { distance: formatTotalDistance(distanceRemainingM) })}
+            {' · '}{t('nav.etaLabel')} {formatETA(durationRemainingS)}
           </span>
         </div>
         <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>

@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
 import { layers, namedFlavor } from '@protomaps/basemaps'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { useLocale } from '../i18n/LocaleProvider'
 import type { Waypoint, RouteResult } from '../types'
 
 const TILES_URL = (import.meta.env.VITE_TILES_URL as string) || '/tiles/map.pmtiles'
@@ -10,7 +11,7 @@ const TILES_URL = (import.meta.env.VITE_TILES_URL as string) || '/tiles/map.pmti
 const protocol = new Protocol()
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol))
 
-function buildMapStyle(): maplibregl.StyleSpecification {
+function buildMapStyle(lang: string): maplibregl.StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
@@ -22,7 +23,7 @@ function buildMapStyle(): maplibregl.StyleSpecification {
         attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a> contributors'
       }
     },
-    layers: layers('protomaps', namedFlavor('light'), { lang: 'de' }) as maplibregl.LayerSpecification[]
+    layers: layers('protomaps', namedFlavor('light'), { lang }) as maplibregl.LayerSpecification[]
   }
 }
 
@@ -63,6 +64,7 @@ function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
 }
 
 export function Map({ start, end, route, onMapClick, followUser, userPos }: Props) {
+  const { locale } = useLocale()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const startMarker = useRef<maplibregl.Marker | null>(null)
@@ -74,7 +76,7 @@ export function Map({ start, end, route, onMapClick, followUser, userPos }: Prop
     if (!containerRef.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: buildMapStyle(),
+      style: buildMapStyle(locale),
       center: [10.0, 51.0],
       zoom: 5
     })
@@ -124,7 +126,46 @@ export function Map({ start, end, route, onMapClick, followUser, userPos }: Prop
 
     mapRef.current = map
     return () => { map.remove(); mapRef.current = null }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Swap basemap language when locale changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    map.setStyle(buildMapStyle(locale))
+    map.once('style.load', () => {
+      if (map.getSource('route')) return
+      map.addSource('route', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      })
+      map.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#1f2937', 'line-width': 7, 'line-opacity': 0.35 }
+      })
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-width': 5,
+          'line-opacity': 0.95,
+          'line-color': [
+            'interpolate', ['linear'], ['get', 'score'],
+            0, '#16a34a', 200, '#84cc16', 400, '#eab308', 600, '#f97316', 900, '#dc2626'
+          ]
+        }
+      })
+      if (route) {
+        const src = map.getSource('route') as maplibregl.GeoJSONSource | undefined
+        src?.setData(buildRouteData(route))
+      }
+    })
+  }, [locale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const map = mapRef.current

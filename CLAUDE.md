@@ -16,10 +16,15 @@ CurveHunter is a motorcycle route planning web app. The core differentiator is a
 - **Database:** PostgreSQL 16 + PostGIS
 - **Infrastructure:** Hetzner VPS, orchestrated with Docker Compose
 
+## Localisation
+
+The UI is German by default with English available as a toggle. All visible UI strings live in [frontend/src/i18n/strings.ts](frontend/src/i18n/strings.ts) (`strings.de` is the source of truth). Components consume them via the `useT()` hook from [frontend/src/i18n/LocaleProvider.tsx](frontend/src/i18n/LocaleProvider.tsx). The selected locale is persisted in `localStorage` under `curvehunter.locale` and also drives the map's basemap-label language (`@protomaps/basemaps` `lang` option). When adding new UI text, add the key to both `de` and `en` — never inline literal strings in components.
+
 ## Directory Structure
 
 ```
 frontend/        React + Vite app (MapLibre GL JS + PMTiles + @protomaps/basemaps)
+  src/i18n/      Locale provider + UI string catalogues (de, en)
 backend/         FastAPI API server
   app/
     main.py      FastAPI app, CORS middleware, router registration
