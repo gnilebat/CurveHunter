@@ -145,47 +145,79 @@
   transform-origin: right center;
 }
 
+/* Hot-mode animations intensify with --hot-intensity (0..1, 100%→200%).
+   Duration shrinks (slower pulse → frantic), glow radius and opacity grow. */
+
 .intense.hot .range::-webkit-slider-thumb {
   border-color: #dc2626;
-  animation: thumbPulse 1.4s ease-in-out infinite;
+  animation: thumbPulse calc(1.6s - var(--hot-intensity, 0) * 1.15s) ease-in-out infinite;
 }
 
 .intense.hot .range::-moz-range-thumb {
   border-color: #dc2626;
-  animation: thumbPulse 1.4s ease-in-out infinite;
+  animation: thumbPulse calc(1.6s - var(--hot-intensity, 0) * 1.15s) ease-in-out infinite;
 }
 
 .intense.hot .value {
-  animation: valueFlare 1.8s ease-in-out infinite;
+  animation: valueFlare calc(1.8s - var(--hot-intensity, 0) * 1.2s) ease-in-out infinite;
 }
 
-.intense.hot .warning {
-  background: linear-gradient(90deg, #fff1f2, #fef2f2);
-  border-color: #fecaca;
-  color: #b91c1c;
-  animation: warningGlow 2s ease-in-out infinite;
+/* Ripple overlay on the filled portion of the track. Repeating bright
+   crests travel left → right; speed and contrast intensify past 100%. */
+.intense.hot .trackWrap::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 6px;
+  transform: translateY(-50%);
+  border-radius: 3px;
+  width: var(--pct, 0%);
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    rgba(255, 255, 255, calc(0.10 + var(--hot-intensity, 0) * 0.55)) 8px,
+    transparent 16px,
+    transparent 28px
+  );
+  background-size: 200% 100%;
+  mix-blend-mode: overlay;
+  animation: ripple calc(2.2s - var(--hot-intensity, 0) * 1.85s) linear infinite;
 }
 
 @keyframes thumbPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55), 0 2px 6px rgba(0,0,0,0.18); }
-  50%      { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.0),  0 2px 10px rgba(220, 38, 38, 0.45); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(220, 38, 38, calc(0.4 + var(--hot-intensity, 0) * 0.4)),
+      0 2px 6px rgba(0, 0, 0, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 calc(4px + var(--hot-intensity, 0) * 10px) rgba(220, 38, 38, 0),
+      0 2px calc(8px + var(--hot-intensity, 0) * 12px)
+        rgba(220, 38, 38, calc(0.35 + var(--hot-intensity, 0) * 0.4));
+  }
 }
 
 @keyframes valueFlare {
   0%, 100% { text-shadow: 0 0 0 transparent; }
-  50%      { text-shadow: 0 0 10px rgba(220, 38, 38, 0.6); }
+  50% {
+    text-shadow:
+      0 0 calc(6px + var(--hot-intensity, 0) * 14px)
+      rgba(220, 38, 38, calc(0.45 + var(--hot-intensity, 0) * 0.45));
+  }
 }
 
-@keyframes warningGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
-  50%      { box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.25), 0 0 12px rgba(220, 38, 38, 0.15); }
+@keyframes ripple {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 64px 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .intense.hot .range::-webkit-slider-thumb,
   .intense.hot .range::-moz-range-thumb,
   .intense.hot .value,
-  .intense.hot .warning {
+  .intense.hot .trackWrap::before {
     animation: none;
   }
 }

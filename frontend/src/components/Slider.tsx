@@ -26,6 +26,11 @@ export function Slider({
     markerAt !== undefined && warningOverMarker && value > markerAt
   const isHot = intense && markerAt !== undefined && value > markerAt
   const intensity = intense ? Math.min(1, value / max) : 0
+  // 0 at the marker, ramps to 1 at max. Drives animation intensity past 100%.
+  const hotIntensity =
+    intense && markerAt !== undefined && max > markerAt
+      ? Math.min(1, Math.max(0, (value - markerAt) / (max - markerAt)))
+      : 0
 
   const wrapClasses = [
     styles.wrap,
@@ -36,7 +41,10 @@ export function Slider({
   return (
     <div
       className={wrapClasses}
-      style={{ '--intensity': intensity } as React.CSSProperties}
+      style={{
+        '--intensity': intensity,
+        '--hot-intensity': hotIntensity
+      } as React.CSSProperties}
     >
       <div className={styles.head}>
         <span className={styles.label}>{label}</span>

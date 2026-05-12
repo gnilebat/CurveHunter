@@ -88,7 +88,10 @@
       "Bash(grep -n '#[0-9a-fA-F]\\\\{3,6\\\\}\\\\|rgb' /f/projects/CurveHunter/frontend/src/components/RoutePanel.module.css)",
       "Bash(curl -s -X POST http://localhost/api/route -H 'Content-Type: application/json' -d '{\"waypoints\":[{\"lat\":51.03878,\"lng\":13.75158,\"name\":\"A\"},{\"lat\":47.530339,\"lng\":12.100927,\"name\":\"B\"}],\"options\":{\"curviness\":0.7,\"avoid_motorways\":0.8,\"avoid_trunks\":0.4,\"avoid_urban\":0.3,\"ignore_urban_curves\":true,\"min_curve_speed\":0}}' -w '\\\\nHTTP=%{http_code}\\\\n')",
       "Bash(curl -fsS -m 90 -X POST http://localhost/api/route -H 'Content-Type: application/json' -d '{\"waypoints\":[{\"lat\":51.03878,\"lng\":13.75158,\"name\":\"A\"},{\"lat\":50.73842,\"lng\":11.30647,\"name\":\"B\"}],\"options\":{\"curviness\":0.7,\"avoid_motorways\":0.8,\"avoid_trunks\":0.4,\"avoid_urban\":0.3,\"ignore_urban_curves\":true,\"min_curve_speed\":0,\"avoid_unpaved\":true}}' -o r.json -w 'HTTP=%{http_code}\\\\n')",
-      "Bash(python -c 'import json; d=json.load\\(open\\(\"r.json\"\\)\\); print\\(\"OK dist_km=\",round\\(d[\"distance_m\"]/1000,1\\),\"curv=\",d[\"curvature_score\"],\"segs=\",len\\(d[\"segments\"]\\)\\)')"
+      "Bash(python -c 'import json; d=json.load\\(open\\(\"r.json\"\\)\\); print\\(\"OK dist_km=\",round\\(d[\"distance_m\"]/1000,1\\),\"curv=\",d[\"curvature_score\"],\"segs=\",len\\(d[\"segments\"]\\)\\)')",
+      "Bash(powershell -c 'Get-PSDrive F | Select-Object @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}')",
+      "Bash(mkdir -p /d/Docker/nominatim-data)",
+      "Read(//d/Docker/**)"
     ]
   }
 }

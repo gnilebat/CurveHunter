@@ -84,4 +84,11 @@ services:
 volumes:
   postgres-data:
   graphhopper-cache:
+  # Nominatim's ~50 GB DB lives on D: so it doesn't fill the Docker Desktop
+  # data drive. WSL2 9p adds some overhead — acceptable for this one-off import.
   nominatim-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: D:/Docker/nominatim-data
