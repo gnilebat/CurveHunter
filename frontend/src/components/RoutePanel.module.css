@@ -427,10 +427,27 @@
 }
 
 .optionsChevron {
-  font-size: 11px;
-  color: var(--text-faint);
-  width: 12px;
-  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, transform 0.2s;
+}
+.optionsChevron svg {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.optionsChevronOpen svg {
+  transform: rotate(90deg);
+}
+.optionsHead:hover .optionsChevron {
+  background: var(--accent);
+  color: #fff;
+  transform: scale(1.08);
 }
 
 .optionsBadge {

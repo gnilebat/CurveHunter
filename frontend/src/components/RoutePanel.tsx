@@ -333,7 +333,11 @@ export function RoutePanel({
           </span>
           <span className={styles.optionsTitle}>{t('options.title')}</span>
           {isCustomized && <span className={styles.optionsBadge}>●</span>}
-          <span className={styles.optionsChevron}>{optionsOpen ? '▾' : '▸'}</span>
+          <span className={`${styles.optionsChevron} ${optionsOpen ? styles.optionsChevronOpen : ''}`} aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
         </button>
 
         {optionsOpen && (

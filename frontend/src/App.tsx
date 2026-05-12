@@ -167,9 +167,13 @@ export default function App() {
 
   useWakeLock(nav.active)
 
-  // Inset the map by the visible portion of the bottom sheet so route fits
-  // stay visible above it on mobile portrait layouts.
-  const bottomInset = isMobile && !nav.active ? panelHeight : 0
+  // Inset the map by the visible portion of the bottom sheet on mobile, but
+  // stop following the panel past 50% viewport height — once the sheet covers
+  // half the screen the map stays put even as the panel keeps growing.
+  const bottomInset =
+    isMobile && !nav.active
+      ? Math.min(panelHeight, typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)
+      : 0
 
   // If the user disables debug mid-navigation, exit nav so they don't get stuck
   // without a real GPS fix.
