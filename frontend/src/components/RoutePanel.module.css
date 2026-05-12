@@ -117,13 +117,13 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #374151;
+  color: var(--text);
   cursor: pointer;
   user-select: none;
 }
 
 .toggle input[type="checkbox"] {
-  accent-color: #f97316;
+  accent-color: var(--accent);
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -136,7 +136,7 @@
 }
 
 .options {
-  background: #f9fafb;
+  background: var(--bg-elevated);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -149,32 +149,32 @@
 
 .presetBtn {
   padding: 7px 10px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #4b5563;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
 }
 
 .presetBtn:hover {
-  border-color: #fb923c;
-  color: #f97316;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .presetActive {
-  background: #f97316;
-  border-color: #f97316;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 2px 6px var(--shadow-strong);
 }
 
 .presetActive:hover {
-  background: #ea580c;
-  border-color: #ea580c;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   color: #fff;
 }
 
@@ -188,24 +188,24 @@
   border: none;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--text);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.optionsHead:hover { background: #f3f4f6; }
+.optionsHead:hover { background: var(--bg-hover); }
 
 .optionsChevron {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--text-faint);
   width: 12px;
   display: inline-block;
 }
 
 .optionsBadge {
   margin-left: auto;
-  color: #f97316;
+  color: var(--accent);
   font-size: 10px;
 }
 

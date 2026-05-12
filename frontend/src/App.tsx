@@ -4,7 +4,6 @@ import { RoutePanel } from './components/RoutePanel'
 import { NavOverlay } from './components/NavOverlay'
 import { useRoute } from './hooks/useRoute'
 import { useNavigation } from './hooks/useNavigation'
-import { DEFAULT_ROUTE_OPTIONS } from './types'
 import type { Waypoint } from './types'
 import './App.css'
 
@@ -49,7 +48,6 @@ export default function App() {
           onInsertAfter={insertWaypointAfter}
           onRemove={removeWaypoint}
           onOptionChange={setOption}
-          onOptionsReset={() => setOptions(DEFAULT_ROUTE_OPTIONS)}
           onOptionsApply={setOptions}
           onSwap={swap}
           onClear={clearAll}

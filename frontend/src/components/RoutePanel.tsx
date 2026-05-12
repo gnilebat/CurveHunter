@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
 import {
-  DEFAULT_ROUTE_OPTIONS, MIN_CURVE_SPEED_STEPS,
+  MIN_CURVE_SPEED_STEPS,
   ROUTE_PRESETS, PRESET_ORDER, matchPreset, type PresetId
 } from '../types'
 import { SearchInput } from './SearchInput'
@@ -23,7 +23,6 @@ interface Props {
   onInsertAfter: (idx: number) => void
   onRemove: (idx: number) => void
   onOptionChange: <K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => void
-  onOptionsReset: () => void
   onOptionsApply: (opts: RouteOptions) => void
   onSwap: () => void
   onClear: () => void
@@ -57,7 +56,7 @@ function toWaypoint(r: SearchResult): Waypoint {
 export function RoutePanel({
   waypoints, route, loading, error, options,
   onWaypointChange, onInsertAfter, onRemove,
-  onOptionChange, onOptionsReset,
+  onOptionChange,
   onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation,
   anyWaypointSet
@@ -108,13 +107,7 @@ export function RoutePanel({
     return t('panel.placeholderVia')
   }
 
-  const optsAreDefault =
-    options.curviness === DEFAULT_ROUTE_OPTIONS.curviness &&
-    options.avoidMotorways === DEFAULT_ROUTE_OPTIONS.avoidMotorways &&
-    options.avoidTrunks === DEFAULT_ROUTE_OPTIONS.avoidTrunks &&
-    options.avoidUrban === DEFAULT_ROUTE_OPTIONS.avoidUrban &&
-    options.ignoreUrbanCurves === DEFAULT_ROUTE_OPTIONS.ignoreUrbanCurves &&
-    options.minCurveSpeed === DEFAULT_ROUTE_OPTIONS.minCurveSpeed
+  const isCustomized = activePreset === null
 
   return (
     <aside className={styles.panel}>
@@ -129,7 +122,7 @@ export function RoutePanel({
           const isLast = idx === waypoints.length - 1
           const isIntermediate = !isFirst && !isLast
           return (
-            <div key={idx}>
+            <Fragment key={idx}>
               <div className={styles.inputRow}>
                 <span className={styles.dot} style={{ background: dotColor(idx) }} />
                 <SearchInput
@@ -147,7 +140,16 @@ export function RoutePanel({
                     disabled={geoLoading}
                     aria-label={t('panel.useMyLocation')}
                   >
-                    {geoLoading ? '…' : '⌖'}
+                    {geoLoading ? '…' : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                        <circle cx="12" cy="12" r="7" />
+                        <line x1="12" y1="2" x2="12" y2="5" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                        <line x1="2" y1="12" x2="5" y2="12" />
+                        <line x1="19" y1="12" x2="22" y2="12" />
+                      </svg>
+                    )}
                   </button>
                 ) : isIntermediate ? (
                   <button
@@ -168,7 +170,7 @@ export function RoutePanel({
                   aria-label={t('panel.addBelow')}
                 >+</button>
               )}
-            </div>
+            </Fragment>
           )
         })}
         <button
@@ -188,7 +190,7 @@ export function RoutePanel({
         >
           <span className={styles.optionsChevron}>{optionsOpen ? '▾' : '▸'}</span>
           <span>{t('options.title')}</span>
-          {!optsAreDefault && <span className={styles.optionsBadge}>●</span>}
+          {isCustomized && <span className={styles.optionsBadge}>●</span>}
         </button>
 
         {optionsOpen && (
@@ -250,11 +252,6 @@ export function RoutePanel({
               onChange={(v) => onOptionChange('minCurveSpeed', v)}
             />
 
-            {!optsAreDefault && (
-              <button className={styles.resetBtn} onClick={onOptionsReset}>
-                ↺ {t('options.resetDefaults')}
-              </button>
-            )}
           </div>
         )}
       </section>

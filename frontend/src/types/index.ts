@@ -24,15 +24,6 @@ export interface RouteOptions {
 
 export const MIN_CURVE_SPEED_STEPS = [0, 30, 50, 70, 80, 90, 100, 120] as const
 
-export const DEFAULT_ROUTE_OPTIONS: RouteOptions = {
-  curviness: 0.7,
-  avoidMotorways: 0.8,
-  avoidTrunks: 0.4,
-  avoidUrban: 0.0,
-  ignoreUrbanCurves: false,
-  minCurveSpeed: 0
-}
-
 export type PresetId = 'fastest' | 'curvy' | 'curvyPlus' | 'curvyMax'
 
 export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
@@ -49,7 +40,7 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     avoidMotorways: 0.8,
     avoidTrunks: 0.4,
     avoidUrban: 0.3,
-    ignoreUrbanCurves: false,
+    ignoreUrbanCurves: true,
     minCurveSpeed: 0
   },
   curvyPlus: {
@@ -71,6 +62,8 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
 }
 
 export const PRESET_ORDER: PresetId[] = ['fastest', 'curvy', 'curvyPlus', 'curvyMax']
+
+export const DEFAULT_ROUTE_OPTIONS: RouteOptions = ROUTE_PRESETS.curvy
 
 export function matchPreset(opts: RouteOptions): PresetId | null {
   for (const id of PRESET_ORDER) {
