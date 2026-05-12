@@ -1,4 +1,5 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { useIsMobile } from '../hooks/useIsMobile'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
 import type { RouteError } from '../hooks/useRoute'
 import type { CustomPreset } from '../hooks/useCustomPresets'
@@ -85,6 +86,48 @@ export function RoutePanel({
   const [geoLoading, setGeoLoading] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(true)
 
+  const isMobile = useIsMobile()
+  const [panelHeight, setPanelHeight] = useState<number>(() =>
+    typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.55) : 480
+  )
+  // Default to options collapsed on mobile so the input section is visible.
+  useEffect(() => { if (isMobile) setOptionsOpen(false) }, [isMobile])
+  // Clamp height when viewport shrinks.
+  useEffect(() => {
+    const onResize = () => setPanelHeight(h => Math.min(h, window.innerHeight * 0.95))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const dragState = useRef({ startY: 0, startH: 0, dragging: false })
+  function snap(h: number): number {
+    const vh = window.innerHeight
+    const points = [Math.round(vh * 0.12), Math.round(vh * 0.55), Math.round(vh * 0.92)]
+    let best = points[0]
+    for (const p of points) if (Math.abs(p - h) < Math.abs(best - h)) best = p
+    return best
+  }
+  function onHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isMobile) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragState.current = { startY: e.clientY, startH: panelHeight, dragging: true }
+  }
+  function onHandlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragState.current.dragging) return
+    const dy = e.clientY - dragState.current.startY
+    // Panel is anchored to the bottom; dragging up should grow it.
+    const next = dragState.current.startH - dy
+    const min = 64
+    const max = Math.round(window.innerHeight * 0.95)
+    setPanelHeight(Math.min(max, Math.max(min, next)))
+  }
+  function onHandlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragState.current.dragging) return
+    dragState.current.dragging = false
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+    setPanelHeight(h => snap(h))
+  }
+
   function useMyLocation() {
     if (!navigator.geolocation) return
     setGeoLoading(true)
@@ -128,7 +171,24 @@ export function RoutePanel({
   const isCustomized = activePreset === null
 
   return (
-    <aside className={styles.panel}>
+    <aside
+      className={`${styles.panel} ${isMobile ? styles.bottomSheet : ''}`}
+      style={isMobile ? ({ ['--panel-h' as string]: `${panelHeight}px` } as React.CSSProperties) : undefined}
+    >
+      {isMobile && (
+        <div
+          className={styles.dragHandle}
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={onHandlePointerUp}
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize panel"
+        >
+          <span className={styles.dragGrip} />
+        </div>
+      )}
       <header className={styles.header}>
         <button
           className={styles.menuBtn}
