@@ -272,7 +272,7 @@ export function Map({
       if (draft) { draft.remove(); draft = null }
     }
 
-    const onLineEnter = () => { if (!dragging) canvas.style.cursor = 'grab' }
+    const onLineEnter = () => { if (!dragging) canvas.style.cursor = 'pointer' }
     const onLineLeave = () => { if (!dragging) canvas.style.cursor = '' }
 
     const onLineDown = (e: maplibregl.MapMouseEvent) => {
@@ -352,9 +352,9 @@ export function Map({
       const color = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#3b82f6'
       const el = document.createElement('div')
       if (isFirst || isLast) {
-        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:grab;`
+        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer;`
       } else {
-        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;cursor:grab;`
+        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;`
         el.textContent = String(idx)
       }
       const marker = new maplibregl.Marker({ element: el, draggable: true })
@@ -362,7 +362,7 @@ export function Map({
         .addTo(map)
       marker.on('dragstart', () => { el.style.cursor = 'grabbing' })
       marker.on('dragend', () => {
-        el.style.cursor = 'grab'
+        el.style.cursor = 'pointer'
         const ll = marker.getLngLat()
         onWaypointDragEnd?.(idx, ll.lat, ll.lng)
       })
