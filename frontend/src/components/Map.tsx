@@ -35,8 +35,7 @@ interface UserPos {
 }
 
 interface Props {
-  start: Waypoint | null
-  end: Waypoint | null
+  waypoints: (Waypoint | null)[]
   route: RouteResult | null
   onMapClick?: (lat: number, lng: number) => void
   followUser?: boolean
@@ -89,15 +88,14 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
 ] as maplibregl.ExpressionSpecification
 
 export function Map({
-  start, end, route, onMapClick, followUser, userPos,
+  waypoints, route, onMapClick, followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments
 }: Props) {
   const { locale } = useLocale()
   const { theme } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
-  const startMarker = useRef<maplibregl.Marker | null>(null)
-  const endMarker = useRef<maplibregl.Marker | null>(null)
+  const waypointMarkers = useRef<maplibregl.Marker[]>([])
   const userMarker = useRef<maplibregl.Marker | null>(null)
   const userArrow = useRef<HTMLDivElement | null>(null)
 
@@ -198,21 +196,25 @@ export function Map({
 
   useEffect(() => {
     const map = mapRef.current
-    startMarker.current?.remove()
-    if (!map || !start) return
-    const el = document.createElement('div')
-    el.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);'
-    startMarker.current = new maplibregl.Marker({ element: el }).setLngLat([start.lng, start.lat]).addTo(map)
-  }, [start])
-
-  useEffect(() => {
-    const map = mapRef.current
-    endMarker.current?.remove()
-    if (!map || !end) return
-    const el = document.createElement('div')
-    el.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);'
-    endMarker.current = new maplibregl.Marker({ element: el }).setLngLat([end.lng, end.lat]).addTo(map)
-  }, [end])
+    waypointMarkers.current.forEach(m => m.remove())
+    waypointMarkers.current = []
+    if (!map) return
+    waypoints.forEach((wp, idx) => {
+      if (!wp) return
+      const isFirst = idx === 0
+      const isLast = idx === waypoints.length - 1
+      const color = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#3b82f6'
+      const el = document.createElement('div')
+      if (isFirst || isLast) {
+        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);`
+      } else {
+        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;`
+        el.textContent = String(idx)
+      }
+      const marker = new maplibregl.Marker({ element: el }).setLngLat([wp.lng, wp.lat]).addTo(map)
+      waypointMarkers.current.push(marker)
+    })
+  }, [waypoints])
 
   // Dim segments excluded from the curviness score (urban / below-speed)
   useEffect(() => {

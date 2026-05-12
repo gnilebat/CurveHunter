@@ -26,8 +26,7 @@ class RouteOptions(BaseModel):
 
 
 class RouteRequest(BaseModel):
-    start: WaypointIn
-    end: WaypointIn
+    waypoints: list[WaypointIn] = Field(..., min_length=2)
     options: RouteOptions = RouteOptions()
 
 
@@ -67,8 +66,7 @@ class RouteResponse(BaseModel):
 async def plan_route(req: RouteRequest):
     try:
         gh = await graphhopper.route(
-            req.start.lat, req.start.lng,
-            req.end.lat, req.end.lng,
+            points=[(w.lat, w.lng) for w in req.waypoints],
             curviness=req.options.curviness,
             avoid_motorways=req.options.avoid_motorways,
             avoid_trunks=req.options.avoid_trunks,

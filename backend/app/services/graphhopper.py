@@ -86,8 +86,7 @@ def _is_default(curviness, avoid_motorways, avoid_trunks, avoid_urban,
 
 
 async def route(
-    start_lat: float, start_lng: float,
-    end_lat: float, end_lng: float,
+    points: list[tuple[float, float]],   # [(lat, lng), ...] in order: start, vias…, end
     curviness: float,
     avoid_motorways: float,
     avoid_trunks: float,
@@ -101,7 +100,7 @@ async def route(
     )
 
     payload: dict[str, Any] = {
-        "points": [[start_lng, start_lat], [end_lng, end_lat]],
+        "points": [[lng, lat] for (lat, lng) in points],
         "points_encoded": False,
         "instructions": True,
         "elevation": True,

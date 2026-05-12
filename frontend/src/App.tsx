@@ -10,8 +10,9 @@ import './App.css'
 
 export default function App() {
   const {
-    start, end, route, loading, error, options,
-    setStart, setEnd, setOption, setOptions, swap, clearAll, retry
+    waypoints, route, loading, error, options,
+    setWaypoint, insertWaypointAfter, removeWaypoint,
+    setOption, setOptions, swap, clearAll, retry
   } = useRoute()
 
   const nav = useNavigation(route)
@@ -20,28 +21,33 @@ export default function App() {
     if (nav.active) return
     const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
     const wp: Waypoint = { lat, lng, name }
-    if (!start) { setStart(wp); return }
-    if (!end) { setEnd(wp); return }
-    setEnd(wp)
-  }, [nav.active, start, end, setStart, setEnd])
+    const emptyIdx = waypoints.findIndex(w => w === null)
+    if (emptyIdx >= 0) {
+      setWaypoint(emptyIdx, wp)
+    } else {
+      setWaypoint(waypoints.length - 1, wp)
+    }
+  }, [nav.active, waypoints, setWaypoint])
 
   const handleRecalcFromUser = useCallback(() => {
-    if (!nav.userPos || !end) return
-    setStart({ lat: nav.userPos.lat, lng: nav.userPos.lng, name: 'Current location' })
-  }, [nav.userPos, end, setStart])
+    if (!nav.userPos) return
+    setWaypoint(0, { lat: nav.userPos.lat, lng: nav.userPos.lng, name: 'Current location' })
+  }, [nav.userPos, setWaypoint])
+
+  const anyWaypointSet = waypoints.some(w => w !== null)
 
   return (
     <div className="app">
       {!nav.active && (
         <RoutePanel
-          start={start}
-          end={end}
+          waypoints={waypoints}
           route={route}
           loading={loading}
           error={error}
           options={options}
-          onStartChange={setStart}
-          onEndChange={setEnd}
+          onWaypointChange={setWaypoint}
+          onInsertAfter={insertWaypointAfter}
+          onRemove={removeWaypoint}
           onOptionChange={setOption}
           onOptionsReset={() => setOptions(DEFAULT_ROUTE_OPTIONS)}
           onOptionsApply={setOptions}
@@ -49,12 +55,12 @@ export default function App() {
           onClear={clearAll}
           onRetry={retry}
           onStartNavigation={nav.start}
+          anyWaypointSet={anyWaypointSet}
         />
       )}
       <div className="map-wrap">
         <Map
-          start={start}
-          end={end}
+          waypoints={waypoints}
           route={route}
           onMapClick={handleMapClick}
           followUser={nav.active}

@@ -36,15 +36,13 @@ interface RouteApiResponse {
 }
 
 export async function fetchRoute(
-  start: Waypoint,
-  end: Waypoint,
+  waypoints: Waypoint[],
   opts: RouteOptions
 ): Promise<RouteResult> {
   const r = await apiFetch<RouteApiResponse>('/route', {
     method: 'POST',
     body: JSON.stringify({
-      start,
-      end,
+      waypoints,
       options: {
         curviness: opts.curviness,
         avoid_motorways: opts.avoidMotorways,

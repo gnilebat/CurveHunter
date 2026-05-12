@@ -14,14 +14,14 @@ import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
 import styles from './RoutePanel.module.css'
 
 interface Props {
-  start: Waypoint | null
-  end: Waypoint | null
+  waypoints: (Waypoint | null)[]
   route: RouteResult | null
   loading: boolean
   error: string | null
   options: RouteOptions
-  onStartChange: (wp: Waypoint | null) => void
-  onEndChange: (wp: Waypoint | null) => void
+  onWaypointChange: (idx: number, wp: Waypoint | null) => void
+  onInsertAfter: (idx: number) => void
+  onRemove: (idx: number) => void
   onOptionChange: <K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => void
   onOptionsReset: () => void
   onOptionsApply: (opts: RouteOptions) => void
@@ -29,6 +29,7 @@ interface Props {
   onClear: () => void
   onRetry: () => void
   onStartNavigation: () => void
+  anyWaypointSet: boolean
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -54,10 +55,12 @@ function toWaypoint(r: SearchResult): Waypoint {
 }
 
 export function RoutePanel({
-  start, end, route, loading, error, options,
-  onStartChange, onEndChange, onOptionChange, onOptionsReset,
+  waypoints, route, loading, error, options,
+  onWaypointChange, onInsertAfter, onRemove,
+  onOptionChange, onOptionsReset,
   onOptionsApply,
-  onSwap, onClear, onRetry, onStartNavigation
+  onSwap, onClear, onRetry, onStartNavigation,
+  anyWaypointSet
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -70,7 +73,7 @@ export function RoutePanel({
     setGeoLoading(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        onStartChange({
+        onWaypointChange(0, {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           name: t('panel.useMyLocation')
@@ -90,8 +93,20 @@ export function RoutePanel({
     return `${Math.round(score)} (${t('panel.curvyTwisty')})`
   }
 
-  const bothSet = start !== null && end !== null
+  const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
+
+  function dotColor(idx: number) {
+    if (idx === 0) return '#22c55e'
+    if (idx === waypoints.length - 1) return '#ef4444'
+    return '#3b82f6'
+  }
+
+  function placeholderFor(idx: number) {
+    if (idx === 0) return t('panel.placeholderStart')
+    if (idx === waypoints.length - 1) return t('panel.placeholderEnd')
+    return t('panel.placeholderVia')
+  }
 
   const optsAreDefault =
     options.curviness === DEFAULT_ROUTE_OPTIONS.curviness &&
@@ -109,45 +124,60 @@ export function RoutePanel({
       </header>
 
       <div className={styles.inputsBlock}>
-        <div className={styles.inputRow}>
-          <span className={styles.dot} style={{ background: '#22c55e' }} />
-          <SearchInput
-            placeholder={t('panel.placeholderStart')}
-            value={start?.name ?? ''}
-            isSelected={start !== null}
-            onChange={(r) => onStartChange(toWaypoint(r))}
-            onClear={() => onStartChange(null)}
-          />
-          <button
-            className={styles.iconBtn}
-            title={t('panel.useMyLocation')}
-            onClick={useMyLocation}
-            disabled={geoLoading}
-            aria-label={t('panel.useMyLocation')}
-          >
-            {geoLoading ? '…' : '⌖'}
-          </button>
-        </div>
-
+        {waypoints.map((wp, idx) => {
+          const isFirst = idx === 0
+          const isLast = idx === waypoints.length - 1
+          const isIntermediate = !isFirst && !isLast
+          return (
+            <div key={idx}>
+              <div className={styles.inputRow}>
+                <span className={styles.dot} style={{ background: dotColor(idx) }} />
+                <SearchInput
+                  placeholder={placeholderFor(idx)}
+                  value={wp?.name ?? ''}
+                  isSelected={wp !== null}
+                  onChange={(r) => onWaypointChange(idx, toWaypoint(r))}
+                  onClear={() => onWaypointChange(idx, null)}
+                />
+                {isFirst ? (
+                  <button
+                    className={styles.iconBtn}
+                    title={t('panel.useMyLocation')}
+                    onClick={useMyLocation}
+                    disabled={geoLoading}
+                    aria-label={t('panel.useMyLocation')}
+                  >
+                    {geoLoading ? '…' : '⌖'}
+                  </button>
+                ) : isIntermediate ? (
+                  <button
+                    className={styles.iconBtn}
+                    title={t('panel.removeVia')}
+                    onClick={() => onRemove(idx)}
+                    aria-label={t('panel.removeVia')}
+                  >×</button>
+                ) : (
+                  <span className={styles.iconBtnPlaceholder} />
+                )}
+              </div>
+              {!isLast && (
+                <button
+                  className={styles.swapBtn}
+                  onClick={() => onInsertAfter(idx)}
+                  title={t('panel.addBelow')}
+                  aria-label={t('panel.addBelow')}
+                >+</button>
+              )}
+            </div>
+          )
+        })}
         <button
           className={styles.swapBtn}
           onClick={onSwap}
-          disabled={!start && !end}
+          disabled={!anyWaypointSet}
           title={t('panel.swap')}
           aria-label={t('panel.swap')}
         >⇅</button>
-
-        <div className={styles.inputRow}>
-          <span className={styles.dot} style={{ background: '#ef4444' }} />
-          <SearchInput
-            placeholder={t('panel.placeholderEnd')}
-            value={end?.name ?? ''}
-            isSelected={end !== null}
-            onChange={(r) => onEndChange(toWaypoint(r))}
-            onClear={() => onEndChange(null)}
-          />
-          <span className={styles.iconBtnPlaceholder} />
-        </div>
       </div>
 
       <section className={styles.options}>
@@ -232,7 +262,7 @@ export function RoutePanel({
       <button
         className={styles.primaryBtn}
         onClick={onRetry}
-        disabled={!bothSet || loading}
+        disabled={!allSet || loading}
       >
         {loading
           ? t('panel.calculating')
@@ -241,7 +271,7 @@ export function RoutePanel({
             : t('panel.findRoute')}
       </button>
 
-      {!bothSet && !error && (
+      {!allSet && !error && (
         <p className={styles.hint}>{t('panel.hint')}</p>
       )}
 
@@ -312,7 +342,7 @@ export function RoutePanel({
 
       <div className={styles.spacer} />
 
-      {(start || end || route) && (
+      {(anyWaypointSet || route) && (
         <button className={styles.clearBtn} onClick={onClear}>{t('panel.clearAll')}</button>
       )}
 
