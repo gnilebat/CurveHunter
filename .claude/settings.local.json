@@ -94,7 +94,11 @@
       "Read(//d/Docker/**)",
       "Bash(curl -s -m 8 'http://localhost/api/search?q=Berlin' -w '\\\\nHTTP=%{http_code}\\\\n')",
       "Bash(powershell -c 'Get-PSDrive D | Select-Object @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}, @{n='\\\\''UsedGB'\\\\'';e={[math]::Round\\($_.Used/1GB,1\\)}}')",
-      "Bash(powershell -c \"\\(Get-ChildItem D:\\\\Docker\\\\nominatim-data -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum / 1GB\")"
+      "Bash(powershell -c \"\\(Get-ChildItem D:\\\\Docker\\\\nominatim-data -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum / 1GB\")",
+      "Bash(powershell -c 'Get-PSDrive C,D,F | Format-Table Name, @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}, @{n='\\\\''UsedGB'\\\\'';e={[math]::Round\\($_.Used/1GB,1\\)}}')",
+      "Bash(echo '=== D:\\\\\\\\Docker contents ===')",
+      "Bash(powershell -c \"Get-ChildItem D:\\\\Docker -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime\")",
+      "Bash(powershell -c '@\\('\\\\''F:\\\\Docker'\\\\'','\\\\''D:\\\\Docker'\\\\'','\\\\''C:\\\\Users\\\\johan\\\\AppData\\\\Local\\\\Docker'\\\\''\\) | ForEach-Object { Get-ChildItem $_ -Recurse -Filter docker_data.vhdx -ErrorAction SilentlyContinue | Select-Object FullName, @{n='\\\\''GB'\\\\'';e={[math]::Round\\($_.Length/1GB,2\\)}}, LastWriteTime }')"
     ]
   }
 }

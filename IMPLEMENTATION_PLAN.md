@@ -143,8 +143,7 @@ Reference: [Road Curvature](https://github.com/Vestride/road-curvature) OSS proj
 ### Phase 3 — Curvy route generator (3–4 weeks) — **Not started, key differentiator**
 1. "Find me a curvy loop from X" — user picks start, distance, and curviness preference
 2. GraphHopper custom profile + curvature-weighted road graph (requires Phase 2 ETL)
-3. GPX export — **done** (current route → GPX 1.1 with waypoints + track + elevation)
-4. Self-hosted Nominatim for place search — done (Germany import; HTTP serving)
+3. Self-hosted Nominatim for place search — done (Germany import; HTTP serving)
 
 ### Phase 4 — User accounts + monetisation — **Not started**
 1. Auth (email/password or OAuth — self-hosted with Auth.js or Keycloak)
