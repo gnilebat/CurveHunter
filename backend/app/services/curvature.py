@@ -25,26 +25,73 @@ def _angle_delta(b1: float, b2: float) -> float:
     return 360 - delta if delta > 180 else delta
 
 
-def overall_curvature(coords: list[list[float]]) -> tuple[float, float]:
-    """Returns (curvature_score, length_km) for the whole path."""
+def overall_curvature(
+    coords: list[list[float]],
+    skip_mask: list[bool] | None = None
+) -> tuple[float, float]:
+    """
+    Returns (curvature_score, length_km) for the whole path.
+    If `skip_mask` is provided, vertices marked True are excluded from both
+    the angle sum and the length sum — used to ignore urban curves.
+    """
     if len(coords) < 3:
         return 0.0, 0.0
     total_angle = 0.0
     total_dist = 0.0
     for i in range(1, len(coords) - 1):
+        if skip_mask is not None and (skip_mask[i - 1] or skip_mask[i] or skip_mask[i + 1]):
+            continue
         b1 = _bearing(coords[i - 1], coords[i])
         b2 = _bearing(coords[i], coords[i + 1])
         total_angle += _angle_delta(b1, b2)
         total_dist += _haversine_m(coords[i - 1], coords[i])
-    total_dist += _haversine_m(coords[-2], coords[-1])
+    if skip_mask is None or not (skip_mask[-2] or skip_mask[-1]):
+        total_dist += _haversine_m(coords[-2], coords[-1])
     length_km = total_dist / 1000
     score = total_angle / length_km if length_km > 0 else 0
     return score, length_km
 
 
+URBAN_ROAD_CLASSES = {"residential", "living_street", "service", "pedestrian"}
+HIGHWAY_LIKE_ROAD_CLASSES = {"motorway", "trunk"}
+
+
+def build_urban_mask(
+    n_coords: int,
+    road_class_ranges: list,
+    max_speed_ranges: list
+) -> list[bool]:
+    """GraphHopper details → per-coordinate urban mask."""
+    is_urban = [False] * n_coords
+    for entry in road_class_ranges:
+        from_idx, to_idx, cls = entry[0], entry[1], entry[2]
+        if isinstance(cls, str) and cls.lower() in URBAN_ROAD_CLASSES:
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                is_urban[i] = True
+    for entry in max_speed_ranges:
+        from_idx, to_idx, speed = entry[0], entry[1], entry[2]
+        if isinstance(speed, (int, float)) and 0 < speed <= 50:
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                is_urban[i] = True
+    return is_urban
+
+
+def build_highway_mask(n_coords: int, road_class_ranges: list) -> list[bool]:
+    """GraphHopper details → per-coordinate mask for Autobahnen + Kraftfahrstraßen."""
+    is_highway = [False] * n_coords
+    for entry in road_class_ranges:
+        from_idx, to_idx, cls = entry[0], entry[1], entry[2]
+        if isinstance(cls, str) and cls.lower() in HIGHWAY_LIKE_ROAD_CLASSES:
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                is_highway[i] = True
+    return is_highway
+
+
 def segment_curvature(
     coords: list[list[float]],
-    window_m: float = 500.0
+    window_m: float = 500.0,
+    urban_mask: list[bool] | None = None,
+    highway_mask: list[bool] | None = None
 ) -> list[dict]:
     """
     Split the path into ~window_m sized chunks and score each.
@@ -52,24 +99,38 @@ def segment_curvature(
     Adjacent segments share an endpoint so the rendered line has no gaps.
     """
     if len(coords) < 3:
-        return [{"coordinates": coords, "score": 0.0, "length_km": 0.0}]
+        return [{"coordinates": coords, "score": 0.0, "length_km": 0.0, "is_urban": False, "is_highway": False}]
 
     segments: list[dict] = []
     buf: list[list[float]] = [coords[0]]
+    buf_indices: list[int] = [0]
     buf_len = 0.0
+
+    def mask_fraction(mask: list[bool] | None, indices: list[int]) -> float:
+        if mask is None or not indices:
+            return 0.0
+        hits = sum(1 for i in indices if i < len(mask) and mask[i])
+        return hits / len(indices)
 
     for i in range(1, len(coords)):
         d = _haversine_m(coords[i - 1], coords[i])
         buf.append(coords[i])
+        buf_indices.append(i)
         buf_len += d
 
         if buf_len >= window_m and len(buf) >= 3:
             score, length_km = overall_curvature(buf)
-            segments.append({"coordinates": buf, "score": round(score, 1), "length_km": round(length_km, 3)})
+            segments.append({
+                "coordinates": buf,
+                "score": round(score, 1),
+                "length_km": round(length_km, 3),
+                "is_urban": mask_fraction(urban_mask, buf_indices) >= 0.5,
+                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5
+            })
             buf = [coords[i]]
+            buf_indices = [i]
             buf_len = 0.0
 
-    # Tail: append remainder to the last segment to avoid a tiny stub
     if len(buf) >= 2:
         if segments and len(buf) < 3:
             last = segments[-1]
@@ -79,6 +140,12 @@ def segment_curvature(
             last["length_km"] = round(length_km, 3)
         else:
             score, length_km = overall_curvature(buf)
-            segments.append({"coordinates": buf, "score": round(score, 1), "length_km": round(length_km, 3)})
+            segments.append({
+                "coordinates": buf,
+                "score": round(score, 1),
+                "length_km": round(length_km, 3),
+                "is_urban": mask_fraction(urban_mask, buf_indices) >= 0.5,
+                "is_highway": mask_fraction(highway_mask, buf_indices) >= 0.5
+            })
 
     return segments

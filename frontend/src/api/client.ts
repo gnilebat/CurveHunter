@@ -1,4 +1,4 @@
-import type { RouteResult, RouteSegment, SearchResult, Waypoint } from '../types'
+import type { RouteResult, RouteSegment, RouteOptions, SearchResult, Waypoint } from '../types'
 
 const BASE = '/api'
 
@@ -21,7 +21,7 @@ interface RouteApiResponse {
   ascent_m: number
   descent_m: number
   curvature_score: number | null
-  segments: { coordinates: number[][]; score: number; length_km: number }[]
+  segments: { coordinates: number[][]; score: number; length_km: number; is_urban: boolean; is_highway: boolean }[]
   instructions: {
     text: string
     distance_m: number
@@ -30,21 +30,34 @@ interface RouteApiResponse {
     street_name: string | null
     interval: [number, number]
   }[]
+  ignored_urban: boolean
 }
 
 export async function fetchRoute(
   start: Waypoint,
   end: Waypoint,
-  preferCurvy: boolean
+  opts: RouteOptions
 ): Promise<RouteResult> {
   const r = await apiFetch<RouteApiResponse>('/route', {
     method: 'POST',
-    body: JSON.stringify({ start, end, prefer_curvy: preferCurvy })
+    body: JSON.stringify({
+      start,
+      end,
+      options: {
+        curviness: opts.curviness,
+        avoid_motorways: opts.avoidMotorways,
+        avoid_trunks: opts.avoidTrunks,
+        avoid_urban: opts.avoidUrban,
+        ignore_urban_curves: opts.ignoreUrbanCurves
+      }
+    })
   })
   const segments: RouteSegment[] = r.segments.map(s => ({
     coordinates: s.coordinates,
     score: s.score,
-    lengthKm: s.length_km
+    lengthKm: s.length_km,
+    isUrban: s.is_urban,
+    isHighway: s.is_highway
   }))
   return {
     geometry: r.geometry,

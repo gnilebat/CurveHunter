@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import type { Waypoint, RouteResult, SearchResult } from '../types'
+import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
+import { DEFAULT_ROUTE_OPTIONS } from '../types'
 import { SearchInput } from './SearchInput'
+import { Slider } from './Slider'
 import { useLocale } from '../i18n/LocaleProvider'
 import { LOCALES } from '../i18n/strings'
 import styles from './RoutePanel.module.css'
@@ -11,10 +13,11 @@ interface Props {
   route: RouteResult | null
   loading: boolean
   error: string | null
-  preferCurvy: boolean
+  options: RouteOptions
   onStartChange: (wp: Waypoint | null) => void
   onEndChange: (wp: Waypoint | null) => void
-  onPreferCurvyChange: (v: boolean) => void
+  onOptionChange: <K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => void
+  onOptionsReset: () => void
   onSwap: () => void
   onClear: () => void
   onRetry: () => void
@@ -37,12 +40,13 @@ function toWaypoint(r: SearchResult): Waypoint {
 }
 
 export function RoutePanel({
-  start, end, route, loading, error, preferCurvy,
-  onStartChange, onEndChange, onPreferCurvyChange,
+  start, end, route, loading, error, options,
+  onStartChange, onEndChange, onOptionChange, onOptionsReset,
   onSwap, onClear, onRetry, onStartNavigation
 }: Props) {
   const { t, locale, setLocale } = useLocale()
   const [geoLoading, setGeoLoading] = useState(false)
+  const [optionsOpen, setOptionsOpen] = useState(true)
 
   function useMyLocation() {
     if (!navigator.geolocation) return
@@ -71,6 +75,13 @@ export function RoutePanel({
 
   const bothSet = start !== null && end !== null
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
+
+  const optsAreDefault =
+    options.curviness === DEFAULT_ROUTE_OPTIONS.curviness &&
+    options.avoidMotorways === DEFAULT_ROUTE_OPTIONS.avoidMotorways &&
+    options.avoidTrunks === DEFAULT_ROUTE_OPTIONS.avoidTrunks &&
+    options.avoidUrban === DEFAULT_ROUTE_OPTIONS.avoidUrban &&
+    options.ignoreUrbanCurves === DEFAULT_ROUTE_OPTIONS.ignoreUrbanCurves
 
   return (
     <aside className={styles.panel}>
@@ -121,14 +132,61 @@ export function RoutePanel({
         </div>
       </div>
 
-      <label className={styles.toggle}>
-        <input
-          type="checkbox"
-          checked={preferCurvy}
-          onChange={(e) => onPreferCurvyChange(e.target.checked)}
-        />
-        <span>{t('panel.preferCurvy')}</span>
-      </label>
+      <section className={styles.options}>
+        <button
+          className={styles.optionsHead}
+          onClick={() => setOptionsOpen(!optionsOpen)}
+          aria-expanded={optionsOpen}
+        >
+          <span className={styles.optionsChevron}>{optionsOpen ? '▾' : '▸'}</span>
+          <span>{t('options.title')}</span>
+          {!optsAreDefault && <span className={styles.optionsBadge}>●</span>}
+        </button>
+
+        {optionsOpen && (
+          <div className={styles.optionsBody}>
+            <Slider
+              label={t('options.curviness')}
+              hint={t('options.curvinessHint')}
+              value={options.curviness}
+              onChange={(v) => onOptionChange('curviness', v)}
+            />
+            <Slider
+              label={t('options.avoidMotorways')}
+              value={options.avoidMotorways}
+              onChange={(v) => onOptionChange('avoidMotorways', v)}
+            />
+            <Slider
+              label={t('options.avoidTrunks')}
+              value={options.avoidTrunks}
+              onChange={(v) => onOptionChange('avoidTrunks', v)}
+            />
+            <Slider
+              label={t('options.avoidUrban')}
+              hint={t('options.avoidUrbanHint')}
+              value={options.avoidUrban}
+              onChange={(v) => onOptionChange('avoidUrban', v)}
+            />
+            <label className={styles.toggle}>
+              <input
+                type="checkbox"
+                checked={options.ignoreUrbanCurves}
+                onChange={(e) => onOptionChange('ignoreUrbanCurves', e.target.checked)}
+              />
+              <div className={styles.toggleText}>
+                <span>{t('options.ignoreUrbanCurves')}</span>
+                <span className={styles.toggleHint}>{t('options.ignoreUrbanCurvesHint')}</span>
+              </div>
+            </label>
+
+            {!optsAreDefault && (
+              <button className={styles.resetBtn} onClick={onOptionsReset}>
+                ↺ {t('options.resetDefaults')}
+              </button>
+            )}
+          </div>
+        )}
+      </section>
 
       <button
         className={styles.primaryBtn}
@@ -160,6 +218,12 @@ export function RoutePanel({
             <div className={styles.legendLabels}>
               <span>{t('panel.legendStraight')}</span>
               <span>{t('panel.legendTwisty')}</span>
+            </div>
+            <div className={styles.legendTitle}>{t('panel.legendHighwayTitle')}</div>
+            <div className={styles.legendBarHighway} />
+            <div className={styles.legendLabels}>
+              <span>{t('panel.legendHighwayLow')}</span>
+              <span>{t('panel.legendHighwayHigh')}</span>
             </div>
           </div>
 

@@ -113,8 +113,8 @@
 
 .toggle {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
   font-size: 14px;
   color: #374151;
   cursor: pointer;
@@ -126,6 +126,81 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.toggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggleHint {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+.options {
+  background: #f9fafb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.optionsHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.optionsHead:hover { background: #f3f4f6; }
+
+.optionsChevron {
+  font-size: 11px;
+  color: #9ca3af;
+  width: 12px;
+  display: inline-block;
+}
+
+.optionsBadge {
+  margin-left: auto;
+  color: #f97316;
+  font-size: 10px;
+}
+
+.optionsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 14px 14px;
+}
+
+.resetBtn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.resetBtn:hover {
+  border-color: #f97316;
+  color: #f97316;
 }
 
 .primaryBtn {
@@ -191,6 +266,21 @@
   height: 8px;
   border-radius: 4px;
   background: linear-gradient(to right, #16a34a 0%, #84cc16 22%, #eab308 44%, #f97316 67%, #dc2626 100%);
+}
+
+.legendBarHighway {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #bfdbfe 0%, #60a5fa 25%, #3b82f6 50%, #1d4ed8 75%, #1e3a8a 100%);
+}
+
+.legendTitle {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 8px;
+  font-weight: 600;
 }
 
 .legendLabels {

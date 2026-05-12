@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.services import graphhopper
-from app.services.curvature import overall_curvature, segment_curvature
+from app.services.curvature import overall_curvature, segment_curvature, build_urban_mask, build_highway_mask
 
 router = APIRouter()
 
@@ -12,25 +12,35 @@ class WaypointIn(BaseModel):
     name: str
 
 
+class RouteOptions(BaseModel):
+    curviness: float = Field(0.7, ge=0.0, le=1.0)
+    avoid_motorways: float = Field(0.8, ge=0.0, le=1.0)
+    avoid_trunks: float = Field(0.4, ge=0.0, le=1.0)
+    avoid_urban: float = Field(0.0, ge=0.0, le=1.0)
+    ignore_urban_curves: bool = False
+
+
 class RouteRequest(BaseModel):
     start: WaypointIn
     end: WaypointIn
-    prefer_curvy: bool = True
+    options: RouteOptions = RouteOptions()
 
 
 class RouteSegment(BaseModel):
     coordinates: list[list[float]]
     score: float
     length_km: float
+    is_urban: bool = False
+    is_highway: bool = False
 
 
 class Instruction(BaseModel):
     text: str
     distance_m: float
     duration_s: float
-    sign: int                      # GraphHopper turn code (-3..7)
+    sign: int
     street_name: str | None
-    interval: list[int]            # [start, end] indices into geometry
+    interval: list[int]
 
 
 class RouteResponse(BaseModel):
@@ -42,6 +52,7 @@ class RouteResponse(BaseModel):
     curvature_score: float | None
     segments: list[RouteSegment]
     instructions: list[Instruction]
+    ignored_urban: bool
 
 
 @router.post("/route", response_model=RouteResponse)
@@ -50,7 +61,10 @@ async def plan_route(req: RouteRequest):
         gh = await graphhopper.route(
             req.start.lat, req.start.lng,
             req.end.lat, req.end.lng,
-            req.prefer_curvy
+            curviness=req.options.curviness,
+            avoid_motorways=req.options.avoid_motorways,
+            avoid_trunks=req.options.avoid_trunks,
+            avoid_urban=req.options.avoid_urban
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
@@ -59,11 +73,31 @@ async def plan_route(req: RouteRequest):
         raise HTTPException(status_code=404, detail="No route found")
 
     path = gh["paths"][0]
-    coords = path["points"]["coordinates"]  # [[lng, lat, (z)], ...]
+    coords = path["points"]["coordinates"]
     coords_2d = [[c[0], c[1]] for c in coords]
 
-    score, _ = overall_curvature(coords_2d)
-    segments = segment_curvature(coords_2d, window_m=500.0)
+    # Per-coordinate urban mask from GraphHopper details
+    details = path.get("details", {})
+    urban_mask = build_urban_mask(
+        n_coords=len(coords_2d),
+        road_class_ranges=details.get("road_class", []),
+        max_speed_ranges=details.get("max_speed", [])
+    )
+    highway_mask = build_highway_mask(
+        n_coords=len(coords_2d),
+        road_class_ranges=details.get("road_class", [])
+    )
+
+    score, _ = overall_curvature(
+        coords_2d,
+        skip_mask=urban_mask if req.options.ignore_urban_curves else None
+    )
+    segments = segment_curvature(
+        coords_2d,
+        window_m=500.0,
+        urban_mask=urban_mask,
+        highway_mask=highway_mask
+    )
 
     instructions = [
         Instruction(
@@ -85,5 +119,6 @@ async def plan_route(req: RouteRequest):
         descent_m=path.get("descend", 0),
         curvature_score=round(score, 1),
         segments=[RouteSegment(**s) for s in segments],
-        instructions=instructions
+        instructions=instructions,
+        ignored_urban=req.options.ignore_urban_curves
     )

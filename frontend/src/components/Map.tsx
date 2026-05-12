@@ -40,6 +40,7 @@ interface Props {
   onMapClick?: (lat: number, lng: number) => void
   followUser?: boolean
   userPos?: UserPos | null
+  dimUrbanSegments?: boolean
 }
 
 function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
@@ -48,7 +49,11 @@ function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
       type: 'FeatureCollection',
       features: route.segments.map(seg => ({
         type: 'Feature',
-        properties: { score: seg.score },
+        properties: {
+          score: seg.score,
+          urban: seg.isUrban ? 1 : 0,
+          highway: seg.isHighway ? 1 : 0
+        },
         geometry: { type: 'LineString', coordinates: seg.coordinates }
       }))
     }
@@ -57,13 +62,30 @@ function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
     type: 'FeatureCollection',
     features: [{
       type: 'Feature',
-      properties: { score: 0 },
+      properties: { score: 0, urban: 0, highway: 0 },
       geometry: route.geometry
     }]
   }
 }
 
-export function Map({ start, end, route, onMapClick, followUser, userPos }: Props) {
+const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
+  'case',
+  ['==', ['get', 'highway'], 1],
+  // Highway-like: blue scale (darker = more curvy, unusual for highway)
+  ['interpolate', ['linear'], ['get', 'score'],
+    0,   '#bfdbfe',   // light blue (straight motorway)
+    100, '#60a5fa',
+    300, '#3b82f6',
+    500, '#1d4ed8',
+    900, '#1e3a8a'    // deep navy (very curvy highway, rare)
+  ],
+  // Normal roads: green→red curviness scale
+  ['interpolate', ['linear'], ['get', 'score'],
+    0, '#16a34a', 200, '#84cc16', 400, '#eab308', 600, '#f97316', 900, '#dc2626'
+  ]
+] as maplibregl.ExpressionSpecification
+
+export function Map({ start, end, route, onMapClick, followUser, userPos, dimUrbanSegments }: Props) {
   const { locale } = useLocale()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -112,14 +134,7 @@ export function Map({ start, end, route, onMapClick, followUser, userPos }: Prop
         paint: {
           'line-width': 5,
           'line-opacity': 0.95,
-          'line-color': [
-            'interpolate', ['linear'], ['get', 'score'],
-            0,    '#16a34a', // green — straight
-            200,  '#84cc16', // lime
-            400,  '#eab308', // yellow
-            600,  '#f97316', // orange
-            900,  '#dc2626'  // red — twisty
-          ]
+          'line-color': ROUTE_LINE_COLOR
         }
       })
     })
@@ -154,10 +169,7 @@ export function Map({ start, end, route, onMapClick, followUser, userPos }: Prop
         paint: {
           'line-width': 5,
           'line-opacity': 0.95,
-          'line-color': [
-            'interpolate', ['linear'], ['get', 'score'],
-            0, '#16a34a', 200, '#84cc16', 400, '#eab308', 600, '#f97316', 900, '#dc2626'
-          ]
+          'line-color': ROUTE_LINE_COLOR
         }
       })
       if (route) {
@@ -194,6 +206,24 @@ export function Map({ start, end, route, onMapClick, followUser, userPos }: Prop
     el.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);'
     endMarker.current = new maplibregl.Marker({ element: el }).setLngLat([end.lng, end.lat]).addTo(map)
   }, [end])
+
+  // Dim urban segments when the score-filter flag is on
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const apply = () => {
+      if (!map.getLayer('route-line')) return
+      const urbanOpacity = dimUrbanSegments ? 0.25 : 0.95
+      map.setPaintProperty('route-line', 'line-opacity', [
+        'case', ['==', ['get', 'urban'], 1], urbanOpacity, 0.95
+      ])
+      map.setPaintProperty('route-casing', 'line-opacity', [
+        'case', ['==', ['get', 'urban'], 1], dimUrbanSegments ? 0.1 : 0.35, 0.35
+      ])
+    }
+    if (map.isStyleLoaded()) apply()
+    else map.once('load', apply)
+  }, [dimUrbanSegments])
 
   useEffect(() => {
     const map = mapRef.current
