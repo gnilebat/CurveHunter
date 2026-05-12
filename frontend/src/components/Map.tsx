@@ -22,7 +22,7 @@ function buildMapStyle(): maplibregl.StyleSpecification {
         attribution: '© <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a> contributors'
       }
     },
-    layers: layers('protomaps', namedFlavor('light')) as maplibregl.LayerSpecification[]
+    layers: layers('protomaps', namedFlavor('light'), { lang: 'de' }) as maplibregl.LayerSpecification[]
   }
 }
 

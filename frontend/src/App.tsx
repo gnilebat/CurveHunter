@@ -60,9 +60,11 @@ export default function App() {
         {nav.active && (
           <NavOverlay
             currentInstruction={nav.currentInstruction}
+            nextInstruction={nav.nextInstruction}
             distanceToNextTurnM={nav.distanceToNextTurnM}
             distanceRemainingM={nav.distanceRemainingM}
             durationRemainingS={nav.durationRemainingS}
+            speedMs={nav.userPos?.speed ?? null}
             offRoute={nav.offRoute}
             arrived={nav.arrived}
             onStop={nav.stop}

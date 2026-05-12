@@ -12,6 +12,7 @@ export interface NavigationState {
   active: boolean
   userPos: UserPosition | null
   currentInstruction: Instruction | null
+  nextInstruction: Instruction | null
   distanceToNextTurnM: number
   distanceRemainingM: number
   durationRemainingS: number
@@ -89,6 +90,7 @@ export function useNavigation(route: RouteResult | null) {
         active,
         userPos,
         currentInstruction: null,
+        nextInstruction: null,
         distanceToNextTurnM: 0,
         distanceRemainingM: 0,
         durationRemainingS: 0,
@@ -101,17 +103,21 @@ export function useNavigation(route: RouteResult | null) {
     const offRoute = distM > OFF_ROUTE_THRESHOLD_M
 
     // Find the instruction whose interval contains the closest vertex
-    let currentInstruction: Instruction | null = null
-    for (const ins of route.instructions) {
+    let currentIdx = -1
+    for (let i = 0; i < route.instructions.length; i++) {
+      const ins = route.instructions[i]
       if (idx >= ins.interval[0] && idx <= ins.interval[1]) {
-        currentInstruction = ins
+        currentIdx = i
         break
       }
     }
-    if (!currentInstruction && route.instructions.length > 0) {
-      // After last instruction interval — show the final "arrive" step
-      currentInstruction = route.instructions[route.instructions.length - 1]
+    if (currentIdx === -1 && route.instructions.length > 0) {
+      currentIdx = route.instructions.length - 1
     }
+    const currentInstruction = currentIdx >= 0 ? route.instructions[currentIdx] : null
+    const nextInstruction = currentIdx >= 0 && currentIdx + 1 < route.instructions.length
+      ? route.instructions[currentIdx + 1]
+      : null
 
     // Distance to the start of the NEXT instruction's geometry
     let distanceToNextTurnM = 0
@@ -142,6 +148,7 @@ export function useNavigation(route: RouteResult | null) {
       active,
       userPos,
       currentInstruction,
+      nextInstruction,
       distanceToNextTurnM,
       distanceRemainingM,
       durationRemainingS,
