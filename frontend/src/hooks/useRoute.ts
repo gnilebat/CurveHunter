@@ -75,6 +75,12 @@ export function useRoute() {
     setWaypointsState(prev => [...prev.slice(0, idx + 1), null, ...prev.slice(idx + 1)])
   }, [])
 
+  // Insert a populated waypoint at index 0 (existing waypoints shift right).
+  // Used by the off-route "navigate to start" action.
+  const prependWaypoint = useCallback((wp: Waypoint) => {
+    setWaypointsState(prev => [wp, ...prev])
+  }, [])
+
   const removeWaypoint = useCallback((idx: number) => {
     setWaypointsState(prev => (prev.length > 2 ? prev.filter((_, i) => i !== idx) : prev))
   }, [])
@@ -114,6 +120,6 @@ export function useRoute() {
     setWaypoint,
     insertWaypointBefore, insertWaypointAfter, removeWaypoint,
     setOption, setOptions,
-    swap, clearAll, loadRoute, retry
+    swap, clearAll, loadRoute, prependWaypoint, retry
   }
 }

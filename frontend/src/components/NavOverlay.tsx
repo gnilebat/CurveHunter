@@ -20,6 +20,7 @@ interface Props {
   voiceEnabled: boolean
   voiceAvailable: boolean
   onToggleVoice: () => void
+  recalculating: boolean
 }
 
 // GraphHopper sign → translation key under `nav.verb`
@@ -48,7 +49,8 @@ export function NavOverlay({
   currentInstruction, nextInstruction,
   distanceToNextTurnM, distanceRemainingM, durationRemainingS, speedMs,
   offRoute, arrived, onStop, onRecalculate,
-  voiceEnabled, voiceAvailable, onToggleVoice
+  voiceEnabled, voiceAvailable, onToggleVoice,
+  recalculating
 }: Props) {
   const { t, locale } = useLocale()
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
@@ -206,7 +208,15 @@ export function NavOverlay({
       {offRoute && (
         <div className={styles.offRoute}>
           <span>{t('nav.offRoute')}</span>
-          <button className={styles.recalcBtn} onClick={onRecalculate}>{t('nav.recalculate')}</button>
+          <button
+            className={styles.recalcBtn}
+            onClick={onRecalculate}
+            disabled={recalculating}
+            aria-busy={recalculating}
+          >
+            {recalculating && <span className={styles.recalcSpinner} aria-hidden />}
+            {recalculating ? t('panel.calculating') : t('nav.recalculate')}
+          </button>
         </div>
       )}
 

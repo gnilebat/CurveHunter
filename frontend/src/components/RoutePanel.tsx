@@ -44,6 +44,9 @@ interface Props {
   onSavePlace: () => void
   onSaveRoute: () => void
   onSavePreset: () => void
+
+  panelHeight: number
+  onPanelHeightChange: (h: number) => void
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -78,7 +81,8 @@ export function RoutePanel({
   debugNav, onToggleDebugNav,
   customPresets, activeCustomPresetId,
   onApplyCustomPreset, onDeleteCustomPreset,
-  onOpenMenu, onSavePlace, onSaveRoute, onSavePreset
+  onOpenMenu, onSavePlace, onSaveRoute, onSavePreset,
+  panelHeight, onPanelHeightChange
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -87,17 +91,8 @@ export function RoutePanel({
   const [optionsOpen, setOptionsOpen] = useState(true)
 
   const isMobile = useIsMobile()
-  const [panelHeight, setPanelHeight] = useState<number>(() =>
-    typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.55) : 480
-  )
   // Default to options collapsed on mobile so the input section is visible.
   useEffect(() => { if (isMobile) setOptionsOpen(false) }, [isMobile])
-  // Clamp height when viewport shrinks.
-  useEffect(() => {
-    const onResize = () => setPanelHeight(h => Math.min(h, window.innerHeight * 0.95))
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   const dragState = useRef({ startY: 0, startH: 0, dragging: false })
   function onHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -112,7 +107,7 @@ export function RoutePanel({
     const next = dragState.current.startH - dy
     const min = 64
     const max = Math.round(window.innerHeight * 0.95)
-    setPanelHeight(Math.min(max, Math.max(min, next)))
+    onPanelHeightChange(Math.min(max, Math.max(min, next)))
   }
   function onHandlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragState.current.dragging) return

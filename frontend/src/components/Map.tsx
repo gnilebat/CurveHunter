@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
-import { Protocol } from 'pmtiles'
+import { Protocol, PMTiles } from 'pmtiles'
 import { layers, namedFlavor } from '@protomaps/basemaps'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useLocale } from '../i18n/LocaleProvider'
@@ -42,6 +42,8 @@ interface Props {
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
   dimBelowSpeedSegments?: boolean
+  /** Bottom area of the viewport covered by a UI panel (e.g. the bottom-sheet). */
+  bottomInset?: number
 }
 
 function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
@@ -89,7 +91,8 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
 
 export function Map({
   waypoints, route, onMapClick, followUser, userPos,
-  dimUrbanSegments, dimBelowSpeedSegments
+  dimUrbanSegments, dimBelowSpeedSegments,
+  bottomInset = 0
 }: Props) {
   const { locale } = useLocale()
   const { theme } = useTheme()
@@ -145,7 +148,38 @@ export function Map({
     })
 
     mapRef.current = map
-    return () => { map.remove(); mapRef.current = null }
+
+    // Clamp min-zoom + max-bounds to the actual tile coverage, so the user
+    // can't zoom/pan past the edge of the map data into the grey void.
+    let cancelled = false
+    const archive = new PMTiles(TILES_URL)
+    const dataBoundsRef = { current: null as [[number, number], [number, number]] | null }
+    const recomputeMinZoom = () => {
+      if (!mapRef.current || !dataBoundsRef.current) return
+      const cam = mapRef.current.cameraForBounds(dataBoundsRef.current, { padding: 0 })
+      if (cam?.zoom !== undefined) {
+        // Floor with a small safety margin so the edges aren't grey on resize.
+        mapRef.current.setMinZoom(Math.max(0, cam.zoom + 0.05))
+      }
+    }
+    archive.getHeader().then(h => {
+      if (cancelled || !mapRef.current) return
+      const b: [[number, number], [number, number]] = [
+        [h.minLon, h.minLat],
+        [h.maxLon, h.maxLat]
+      ]
+      dataBoundsRef.current = b
+      mapRef.current.setMaxBounds(b)
+      recomputeMinZoom()
+    }).catch(() => { /* tile metadata unavailable — leave defaults */ })
+    map.on('resize', recomputeMinZoom)
+
+    return () => {
+      cancelled = true
+      map.off('resize', recomputeMinZoom)
+      map.remove()
+      mapRef.current = null
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Swap basemap when locale or theme changes
@@ -259,12 +293,31 @@ export function Map({
           (b, c) => b.extend(c as maplibregl.LngLatLike),
           new maplibregl.LngLatBounds(coords[0], coords[0])
         )
-        map.fitBounds(bounds, { padding: 60, maxZoom: 14 })
+        map.fitBounds(bounds, {
+          padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+          maxZoom: 14
+        })
       }
     }
     if (map.isStyleLoaded()) apply()
     else map.once('load', apply)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route])
+
+  // When the bottom UI panel resizes, gently pan the map upward by half the
+  // height change so the visible-area centre stays roughly steady. No zoom
+  // change, no re-fit — just a slight follow. Skipped during navigation
+  // (camera is locked to the user).
+  const prevInset = useRef(bottomInset)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    map.setPadding({ top: 0, right: 0, left: 0, bottom: bottomInset })
+    if (followUser) { prevInset.current = bottomInset; return }
+    const delta = bottomInset - prevInset.current
+    prevInset.current = bottomInset
+    if (delta !== 0) map.panBy([0, delta / 2], { duration: 0 })
+  }, [bottomInset, followUser])
 
   // User-position marker (navigation mode)
   useEffect(() => {

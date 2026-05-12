@@ -7,9 +7,14 @@ interface Props {
   title?: string
   children: ReactNode
   width?: number
+  /** Close on backdrop click. Defaults to true. Set false for forms where an
+      accidental click outside would discard user input. */
+  dismissOnBackdrop?: boolean
 }
 
-export function Modal({ open, onClose, title, children, width = 360 }: Props) {
+export function Modal({
+  open, onClose, title, children, width = 360, dismissOnBackdrop = true
+}: Props) {
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -20,7 +25,10 @@ export function Modal({ open, onClose, title, children, width = 360 }: Props) {
   if (!open) return null
 
   return (
-    <div className={styles.backdrop} onClick={onClose}>
+    <div
+      className={styles.backdrop}
+      onClick={dismissOnBackdrop ? onClose : undefined}
+    >
       <div
         className={styles.card}
         style={{ width }}

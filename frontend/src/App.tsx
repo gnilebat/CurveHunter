@@ -10,6 +10,7 @@ import { useRoute } from './hooks/useRoute'
 import { useNavigation, type NavCue } from './hooks/useNavigation'
 import { useNavDebug } from './hooks/useNavDebug'
 import { useWakeLock } from './hooks/useWakeLock'
+import { useIsMobile } from './hooks/useIsMobile'
 import { useSavedRoutes, type SavedRoute } from './hooks/useSavedRoutes'
 import { useCustomPresets, type CustomPreset } from './hooks/useCustomPresets'
 import { useSavedPlaces, type SavedPlace } from './hooks/useSavedPlaces'
@@ -48,7 +49,7 @@ export default function App() {
   const {
     waypoints, route, loading, error, options,
     setWaypoint, insertWaypointAfter, removeWaypoint,
-    setOption, setOptions, swap, clearAll, loadRoute, retry
+    setOption, setOptions, swap, clearAll, loadRoute, prependWaypoint, retry
   } = useRoute()
 
   const tts = useTTS()
@@ -63,6 +64,16 @@ export default function App() {
     try { localStorage.setItem(DEBUG_NAV_KEY, on ? 'true' : 'false') } catch { /* ignore */ }
   }, [])
   const debug = useNavDebug(route, debugNav)
+
+  const isMobile = useIsMobile()
+  const [panelHeight, setPanelHeight] = useState<number>(() =>
+    typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.55) : 480
+  )
+  useEffect(() => {
+    const onResize = () => setPanelHeight(h => Math.min(h, window.innerHeight * 0.95))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const savedRoutes = useSavedRoutes()
   const customPresets = useCustomPresets()
@@ -156,6 +167,10 @@ export default function App() {
 
   useWakeLock(nav.active)
 
+  // Inset the map by the visible portion of the bottom sheet so route fits
+  // stay visible above it on mobile portrait layouts.
+  const bottomInset = isMobile && !nav.active ? panelHeight : 0
+
   // If the user disables debug mid-navigation, exit nav so they don't get stuck
   // without a real GPS fix.
   useEffect(() => {
@@ -178,8 +193,13 @@ export default function App() {
 
   const handleRecalcFromUser = useCallback(() => {
     if (!nav.userPos) return
-    setWaypoint(0, { lat: nav.userPos.lat, lng: nav.userPos.lng, name: 'Current location' })
-  }, [nav.userPos, setWaypoint])
+    // Prepend current location as a new first waypoint — the existing start
+    // becomes the first via point, so we route TO it and then continue along
+    // the original route.
+    prependWaypoint({
+      lat: nav.userPos.lat, lng: nav.userPos.lng, name: t('nav.currentLocation')
+    })
+  }, [nav.userPos, prependWaypoint, t])
 
   const anyWaypointSet = waypoints.some(w => w !== null)
 
@@ -212,6 +232,8 @@ export default function App() {
           onSavePlace={handleSavePlace}
           onSaveRoute={handleSaveRoute}
           onSavePreset={handleSavePreset}
+          panelHeight={panelHeight}
+          onPanelHeightChange={setPanelHeight}
         />
       )}
       <div className="map-wrap">
@@ -223,6 +245,7 @@ export default function App() {
           userPos={nav.userPos}
           dimUrbanSegments={options.ignoreUrbanCurves}
           dimBelowSpeedSegments={options.minCurveSpeed > 0}
+          bottomInset={bottomInset}
         />
         {nav.active && (
           <NavOverlay
@@ -239,6 +262,7 @@ export default function App() {
             voiceEnabled={tts.enabled}
             voiceAvailable={tts.available}
             onToggleVoice={() => tts.setEnabled(!tts.enabled)}
+            recalculating={loading}
           />
         )}
         {nav.active && debugNav && (

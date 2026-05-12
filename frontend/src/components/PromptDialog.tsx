@@ -23,7 +23,7 @@ export function PromptDialog({
   useEffect(() => { if (open) setValue(initialValue) }, [open, initialValue])
 
   return (
-    <Modal open={open} onClose={onCancel} title={title}>
+    <Modal open={open} onClose={onCancel} title={title} dismissOnBackdrop={false}>
       <div className={styles.field}>
         <label>{label}</label>
         <input
