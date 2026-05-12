@@ -17,6 +17,7 @@ import { useSavedPlaces, type SavedPlace } from './hooks/useSavedPlaces'
 import { useTTS } from './tts/useTTS'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
+import { routeToGpx, downloadGpx, defaultGpxFilename } from './lib/gpx'
 import type { Waypoint, RouteOptions } from './types'
 import './App.css'
 
@@ -111,6 +112,16 @@ export default function App() {
   const handleSavePreset = useCallback(() => {
     setPendingSave({ kind: 'preset' })
   }, [])
+
+  const handleExportGpx = useCallback(() => {
+    if (!route) return
+    const wps = waypoints.filter((w): w is Waypoint => w !== null)
+    const name = wps.length >= 2
+      ? `${wps[0].name} → ${wps[wps.length - 1].name}`
+      : 'CurveHunter route'
+    const gpx = routeToGpx(route, wps, name)
+    downloadGpx(defaultGpxFilename(), gpx)
+  }, [route, waypoints])
 
   const handleConfirmSave = useCallback((name: string) => {
     if (!pendingSave) return
@@ -243,6 +254,7 @@ export default function App() {
           onSavePlace={handleSavePlace}
           onSaveRoute={handleSaveRoute}
           onSavePreset={handleSavePreset}
+          onExportGpx={handleExportGpx}
           panelHeight={panelHeight}
           onPanelHeightChange={setPanelHeight}
         />

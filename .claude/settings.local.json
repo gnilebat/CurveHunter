@@ -92,7 +92,9 @@
       "Bash(powershell -c 'Get-PSDrive F | Select-Object @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}')",
       "Bash(mkdir -p /d/Docker/nominatim-data)",
       "Read(//d/Docker/**)",
-      "Bash(curl -s -m 8 'http://localhost/api/search?q=Berlin' -w '\\\\nHTTP=%{http_code}\\\\n')"
+      "Bash(curl -s -m 8 'http://localhost/api/search?q=Berlin' -w '\\\\nHTTP=%{http_code}\\\\n')",
+      "Bash(powershell -c 'Get-PSDrive D | Select-Object @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}, @{n='\\\\''UsedGB'\\\\'';e={[math]::Round\\($_.Used/1GB,1\\)}}')",
+      "Bash(powershell -c \"\\(Get-ChildItem D:\\\\Docker\\\\nominatim-data -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum / 1GB\")"
     ]
   }
 }

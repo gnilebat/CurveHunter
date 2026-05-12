@@ -123,30 +123,83 @@ Reference: [Road Curvature](https://github.com/Vestride/road-curvature) OSS proj
 
 ## Implementation Phases
 
-### Phase 1 — Map shell (1–2 weeks)
-1. Scaffold React + TypeScript + Vite
-2. Download PMTiles for target region, serve via nginx
-3. MapLibre GL JS renders the map with a motorcycle-appropriate style
-4. Basic A→B routing via self-hosted GraphHopper
-5. Route drawn on map
+### Phase 1 — Map shell (1–2 weeks) — **Done**
+1. Scaffold React + TypeScript + Vite — done
+2. Download PMTiles for target region, serve via nginx — done (Germany ~7 GB)
+3. MapLibre GL JS renders the map with a motorcycle-appropriate style — done (Protomaps basemap, light + dark themes, DE/EN labels)
+4. Basic A→B routing via self-hosted GraphHopper — done (`motorcycle` + `motorcycle_curvy` profiles, configurable custom model)
+5. Route drawn on map — done (per-segment colour by live curviness score)
+6. N-waypoint routing with drag-to-place markers, insert/remove waypoints — done
+7. Bottom-sheet UI for portrait/mobile with drag-to-resize handle — done
+8. Min-zoom + max-bounds clamped to PMTiles coverage (no grey void) — done
 
-### Phase 2 — Curviness engine (2–3 weeks)
-1. Set up PostGIS, run ETL pipeline on OSM PBF + SRTM data
-2. FastAPI `/score` endpoint — score any GeoJSON LineString
-3. Colour-code routes on map by curviness
-4. Curviness filter on the route request (min curvature threshold)
+### Phase 2 — Curviness engine (2–3 weeks) — **Partial**
+1. Set up PostGIS, run ETL pipeline on OSM PBF + SRTM data — **not started** (stack provisioned, ETL script stubbed)
+2. FastAPI `/score` endpoint — score any GeoJSON LineString — **live-computed** (no ETL persistence yet)
+3. Colour-code routes on map by curviness — done (per-segment + highway tinting)
+4. Curviness filter on the route request (min curvature threshold) — done (curviness slider 0–200%, min-curve-speed, ignore-urban-curves, avoid-unpaved)
+5. **Next:** persist per-segment curvature in PostGIS so curvy-loop generation has a weighted graph to query
 
-### Phase 3 — Curvy route generator (3–4 weeks)
+### Phase 3 — Curvy route generator (3–4 weeks) — **Not started, key differentiator**
 1. "Find me a curvy loop from X" — user picks start, distance, and curviness preference
-2. GraphHopper custom profile + curvature-weighted road graph
-3. GPX export
-4. Self-hosted Nominatim for place search
+2. GraphHopper custom profile + curvature-weighted road graph (requires Phase 2 ETL)
+3. GPX export — **done** (current route → GPX 1.1 with waypoints + track + elevation)
+4. Self-hosted Nominatim for place search — done (Germany import; HTTP serving)
 
-### Phase 4 — User accounts + monetisation
+### Phase 4 — User accounts + monetisation — **Not started**
 1. Auth (email/password or OAuth — self-hosted with Auth.js or Keycloak)
 2. Stripe integration for subscriptions
 3. Freemium gating: route saves, GPX export, loop generator behind paywall
-4. OSM attribution always visible (ODbL requirement)
+4. OSM attribution always visible (ODbL requirement) — **already enforced** via MapLibre source attribution
+
+---
+
+## Phase 1.5 — Rider QoL (in-flight)
+
+Built on top of the core, mostly without backend changes. **Status as of the current branch:**
+
+### Done
+- **Localised UI** — German default + English toggle (i18n catalogue, persisted in `localStorage`).
+- **Route presets** — Fastest / Kurven / Kurven Plus / Kurven Max. Custom presets save/load/rename/delete with confirmation.
+- **Custom user storage** (no account needed) — saved routes, custom presets, saved places, all in `localStorage` with versioned `v: 1` schemas; `navigator.storage.persist()` requested at startup to resist eviction.
+- **Saved places in autocomplete** — typing surfaces matching saved places first, with a star badge, before Nominatim results.
+- **Turn-by-turn navigation** with live position, distance-to-next-turn, off-route detection, ETA, arrival, route follow camera.
+- **Voice cues** at 500 / 200 / 50 m + arrival + off-route, composed from i18n strings + GraphHopper street names. Pluggable engine abstraction (Web Speech today; Piper stub in place).
+- **Wake lock** during nav (re-acquired on `visibilitychange`).
+- **PWA-style background-audio warning** popup (one-session + persistent dismiss).
+- **Debug navigation simulator** — drag a slider or auto-play position along the route, smooth rAF interpolation, "next turn" jump.
+- **Mobile bottom-sheet panel** with seamless drag-to-resize handle; map pans up until 50 % viewport then locks.
+- **Draggable waypoint markers** for fine-position tuning.
+- **GPX export** of the current route.
+- **Saved routes restore options atomically** (no race with auto-router).
+
+### Top of the backlog
+Sorted by impact / effort:
+
+| Idea | Why | Notes |
+|---|---|---|
+| **Round-trip / curvy loop generator** | The actual product differentiator | Needs Phase 2 ETL first; uses GraphHopper `round_trip` algorithm |
+| **Elevation profile chart** under the stats block | Riders care about climbs as much as curves | Data already present in `route.geometry` (3rd ordinate) |
+| **Route alternatives (2–3 candidates)** | "Curviest" optimisation often misses obvious good roads | GraphHopper `algorithm=alternative_route` |
+| **Share route via URL** | Default expectation for any modern route planner | Encode waypoints + options in query string |
+| **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | New gesture: click + drag on the route layer |
+| **GPX import** | Round-trip with friends, Calimoto / Kurviger exchange | Parse `.gpx`, set waypoints + apply track as user-fixed path |
+| **Reverse whole sequence** | Current swap only flips start ↔ end | One-liner in `useRoute` |
+| **Recently used places** auto-history | Pair with saved-places UI | Capped list under a new key |
+| **PWA install prompt + service worker** | Offline shell + "Add to home screen" | `vite-plugin-pwa`, ~30 min |
+| **Speed-limit overlay** during nav | GraphHopper exposes `max_speed` per edge | Surface via the same details API used by curvature scoring |
+| **"Recentre" floating button** during nav | If the user pans away from their position | One button + `easeTo` to user pos |
+| **Pre-departure summary screen** | "212 km · 87 % Landstraße · 3 Pässe" before pressing Start | Aggregates existing route metadata |
+| **Curvature heatmap layer** on the bare map | Passive discovery of fun roads | Built once Phase 2 ETL fills PostGIS |
+| **Riding-mode preset family** (Touring / Sport / Adventure / Off-road) | Apply coherent option bundles, less slider fiddling | Extends `ROUTE_PRESETS` |
+| **Day/night basemap auto-switch** by local sunset | Theming exists, just gate on time | `SunCalc` lib or simple latitude/time approx |
+| **Native Android wrap via Capacitor** | Background voice + Play Store presence | Same React code; switch when PWA limits bite |
+| **Piper TTS engine** (offline, neural) | Better German voices on devices with poor system TTS | Engine interface already in place at `src/tts/engines.ts` |
+
+### Known limitations to revisit
+- PWA voice stops when the screen locks or app is backgrounded — covered by an in-UI warning today; Capacitor is the eventual fix.
+- Nominatim DB on D:\ via bind mount is functional but slower than a native Docker volume; first-time imports take ~2× longer.
+- Cross-device sync isn't possible without a backend account (Phase 4).
 
 ---
 
