@@ -1,4 +1,4 @@
-import type { RouteResult, SearchResult, Waypoint } from '../types'
+import type { RouteResult, RouteSegment, SearchResult, Waypoint } from '../types'
 
 const BASE = '/api'
 
@@ -14,15 +14,55 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
+interface RouteApiResponse {
+  geometry: GeoJSON.LineString
+  distance_m: number
+  duration_s: number
+  ascent_m: number
+  descent_m: number
+  curvature_score: number | null
+  segments: { coordinates: number[][]; score: number; length_km: number }[]
+  instructions: {
+    text: string
+    distance_m: number
+    duration_s: number
+    sign: number
+    street_name: string | null
+    interval: [number, number]
+  }[]
+}
+
 export async function fetchRoute(
   start: Waypoint,
   end: Waypoint,
   preferCurvy: boolean
 ): Promise<RouteResult> {
-  return apiFetch<RouteResult>('/route', {
+  const r = await apiFetch<RouteApiResponse>('/route', {
     method: 'POST',
     body: JSON.stringify({ start, end, prefer_curvy: preferCurvy })
   })
+  const segments: RouteSegment[] = r.segments.map(s => ({
+    coordinates: s.coordinates,
+    score: s.score,
+    lengthKm: s.length_km
+  }))
+  return {
+    geometry: r.geometry,
+    distanceM: r.distance_m,
+    durationS: r.duration_s,
+    ascentM: r.ascent_m,
+    descentM: r.descent_m,
+    curvatureScore: r.curvature_score,
+    segments,
+    instructions: r.instructions.map(i => ({
+      text: i.text,
+      distanceM: i.distance_m,
+      durationS: i.duration_s,
+      sign: i.sign,
+      streetName: i.street_name,
+      interval: i.interval
+    }))
+  }
 }
 
 export async function searchPlaces(query: string): Promise<SearchResult[]> {

@@ -2,17 +2,14 @@ graphhopper:
   datareader.file: /data/map.osm.pbf
   graph.location: /data/graph-cache
 
+  graph.encoded_values: car_access, car_average_speed, road_class, surface, road_environment, max_speed
+
   profiles:
     - name: motorcycle
-      vehicle: motorcycle
-      weighting: fastest
-      turn_costs: false
+      custom_model_files: [car.json]
 
     - name: motorcycle_curvy
-      vehicle: motorcycle
-      weighting: custom
-      custom_model_files: [motorcycle_curvy.json]
-      turn_costs: false
+      custom_model_files: [car.json, motorcycle_curvy.json]
 
   profiles_ch:
     - profile: motorcycle
@@ -20,9 +17,11 @@ graphhopper:
   import.osm.ignored_highways: footway,cycleway,path,pedestrian,steps
 
 server:
-  application_connector:
-    type: http
-    port: 8989
-  admin_connector:
-    type: http
-    port: 8990
+  application_connectors:
+    - type: http
+      port: 8989
+      bind_host: 0.0.0.0
+  admin_connectors:
+    - type: http
+      port: 8990
+      bind_host: 0.0.0.0

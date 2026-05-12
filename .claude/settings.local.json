@@ -8,7 +8,20 @@
       "Bash(node -e \"const {layers, namedFlavor} = require\\('c:/Users/johan/Documents/projects/CurveHunter/frontend/node_modules/@protomaps/basemaps'\\); const l = layers\\('protomaps', namedFlavor\\('light'\\)\\); console.log\\('count:', l.length, 'sample id:', l[0]?.id\\)\")",
       "Bash(node -e \"console.log\\(require\\('c:/Users/johan/Documents/projects/CurveHunter/frontend/node_modules/maplibre-gl/package.json'\\).version\\)\")",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(gh release *)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(docker compose *)",
+      "Bash(curl -sf http://localhost:80)",
+      "Bash(curl -sf http://localhost:8989/health)",
+      "Bash(docker exec *)",
+      "Bash(docker info *)",
+      "Bash(wmic computersystem *)",
+      "Bash(curl -s \"http://localhost/api/route\" -H \"Content-Type: application/json\" -d '{\"start\":{\"lat\":52.5200,\"lng\":13.4050,\"name\":\"Berlin\"},\"end\":{\"lat\":50.1109,\"lng\":8.6821,\"name\":\"Frankfurt\"},\"prefer_curvy\":false}')",
+      "Bash(curl -s \"http://localhost/api/route\" -H \"Content-Type: application/json\" -d '{\"start\":{\"lat\":52.5200,\"lng\":13.4050,\"name\":\"Berlin\"},\"end\":{\"lat\":48.1351,\"lng\":11.5820,\"name\":\"Munich\"},\"prefer_curvy\":true}')",
+      "Bash(curl -s \"http://localhost/api/route\" -H \"Content-Type: application/json\" -d '{\"start\":{\"lat\":52.5200,\"lng\":13.4050,\"name\":\"Berlin\"},\"end\":{\"lat\":48.1351,\"lng\":11.5820,\"name\":\"Munich\"},\"prefer_curvy\":true}' --max-time 90)",
+      "WebFetch(domain:docs.protomaps.com)"
     ]
   }
 }

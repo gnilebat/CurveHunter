@@ -4,6 +4,21 @@ export interface Waypoint {
   name: string
 }
 
+export interface RouteSegment {
+  coordinates: number[][]
+  score: number
+  lengthKm: number
+}
+
+export interface Instruction {
+  text: string
+  distanceM: number
+  durationS: number
+  sign: number
+  streetName: string | null
+  interval: [number, number]
+}
+
 export interface RouteResult {
   geometry: GeoJSON.LineString
   distanceM: number
@@ -11,6 +26,8 @@ export interface RouteResult {
   ascentM: number
   descentM: number
   curvatureScore: number | null
+  segments: RouteSegment[]
+  instructions: Instruction[]
 }
 
 export interface SearchResult {

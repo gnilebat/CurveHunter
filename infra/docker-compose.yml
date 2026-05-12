@@ -19,6 +19,9 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    volumes:
+      - ../backend/app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       GRAPHHOPPER_URL: http://graphhopper:8989
       NOMINATIM_URL: http://nominatim:8080
@@ -31,7 +34,9 @@ services:
 
   # ── GraphHopper routing engine ───────────────────────────────────────────────
   graphhopper:
-    image: graphhopper/graphhopper:latest
+    build:
+      context: ../routing
+      dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
       - ./data/osm:/data                   # place map.osm.pbf here
@@ -39,14 +44,13 @@ services:
       - ../routing/config.yml:/graphhopper/config.yml:ro
       - ../routing/motorcycle_curvy.json:/graphhopper/motorcycle_curvy.json:ro
     environment:
-      JAVA_OPTS: -Xmx4g -Xms1g
-    command: ["java", "-jar", "graphhopper*.jar", "server", "config.yml"]
+      JAVA_OPTS: -Xmx10g -Xms2g
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8989/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 120s
+      start_period: 180s
 
   # ── Nominatim geocoder ───────────────────────────────────────────────────────
   nominatim:
@@ -57,7 +61,7 @@ services:
       REPLICATION_URL: ""
       NOMINATIM_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./data/osm:/nominatim/data:ro
+      - ./data/osm:/nominatim/data
       - nominatim-data:/var/lib/postgresql/14/main
     shm_size: 1g
 

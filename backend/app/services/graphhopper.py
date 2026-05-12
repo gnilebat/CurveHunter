@@ -13,9 +13,12 @@ async def route(
         "points": [[start_lng, start_lat], [end_lng, end_lat]],
         "profile": "motorcycle_curvy" if prefer_curvy else "motorcycle",
         "points_encoded": False,
-        "instructions": False,
+        "instructions": True,
         "elevation": True,
-        "locale": "en"
+        "locale": "en",
+        # CH is only prepared for the plain motorcycle profile; the custom-model
+        # profile must route without it.
+        "ch.disable": prefer_curvy
     }
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(f"{GH_URL}/route", json=payload)

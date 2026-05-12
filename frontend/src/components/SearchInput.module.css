@@ -5,18 +5,70 @@
 
 .input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 36px 9px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
   background: #fff;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .input:focus {
   border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.inputSelected {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.inputSelected:focus {
+  background: #fff;
+}
+
+.spinner {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #f97316;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+.clearBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.clearBtn:hover {
+  background: #ef4444;
+  color: #fff;
 }
 
 .dropdown {
@@ -31,20 +83,43 @@
   margin: 0;
   padding: 4px 0;
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  max-height: 220px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+  max-height: 260px;
   overflow-y: auto;
 }
 
 .item {
-  padding: 8px 12px;
+  padding: 7px 12px;
   font-size: 13px;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid transparent;
+}
+
+.itemHi {
+  background: #fff7ed;
+  border-left-color: #f97316;
+}
+
+.itemName {
+  font-weight: 600;
+  color: #111827;
+}
+
+.itemDetail {
+  font-size: 11px;
+  color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.item:hover {
-  background: #fff7ed;
+.empty {
+  padding: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  font-style: italic;
 }
