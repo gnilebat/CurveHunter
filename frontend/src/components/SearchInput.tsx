@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { searchPlaces } from '../api/client'
 import { useT } from '../i18n/LocaleProvider'
+import { useSavedPlaces } from '../hooks/useSavedPlaces'
 import type { SearchResult } from '../types'
 import styles from './SearchInput.module.css'
 
@@ -12,10 +13,15 @@ interface Props {
   onClear: () => void
 }
 
+interface Suggestion extends SearchResult {
+  saved?: boolean
+}
+
 export function SearchInput({ placeholder, value, isSelected, onChange, onClear }: Props) {
   const t = useT()
+  const { places } = useSavedPlaces()
   const [query, setQuery] = useState(value)
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [apiResults, setApiResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [highlighted, setHighlighted] = useState(-1)
@@ -26,15 +32,35 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
 
   useEffect(() => { setQuery(value) }, [value])
 
+  // Saved places matching the current query, marked so we can render a star.
+  const savedMatches = useMemo<Suggestion[]>(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 1) return []
+    return places
+      .filter(p => p.name.toLowerCase().includes(q))
+      .map(p => ({
+        lat: p.lat, lng: p.lng, name: p.name, displayName: p.name, saved: true
+      }))
+  }, [places, query])
+
+  // De-duplicate API results that exactly match a saved place (same lat/lng).
+  const results = useMemo<Suggestion[]>(() => {
+    const seen = new Set(savedMatches.map(s => `${s.lat.toFixed(5)},${s.lng.toFixed(5)}`))
+    const apiSugs: Suggestion[] = apiResults
+      .filter(r => !seen.has(`${r.lat.toFixed(5)},${r.lng.toFixed(5)}`))
+      .map(r => ({ ...r }))
+    return [...savedMatches, ...apiSugs]
+  }, [savedMatches, apiResults])
+
   const runSearch = useCallback(async (q: string) => {
     setLoading(true)
     try {
       const res = await searchPlaces(q)
-      setResults(res)
+      setApiResults(res)
       setOpen(true)
       setHighlighted(res.length > 0 ? 0 : -1)
     } catch {
-      setResults([])
+      setApiResults([])
       setOpen(true)
     } finally {
       setLoading(false)
@@ -46,23 +72,28 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
     setQuery(q)
     setSearched(false)
     if (debounce.current) clearTimeout(debounce.current)
-    if (q.length < 2) { setResults([]); setOpen(false); setLoading(false); return }
+    if (q.length < 1) {
+      setApiResults([]); setOpen(false); setLoading(false); return
+    }
+    // Show any saved-place matches immediately, even before the API responds.
+    setOpen(true)
+    if (q.length < 2) { setApiResults([]); setLoading(false); return }
     setLoading(true)
     debounce.current = setTimeout(() => runSearch(q), 300)
   }
 
-  function select(r: SearchResult) {
+  function select(r: Suggestion) {
     setQuery(r.name)
-    setResults([])
+    setApiResults([])
     setOpen(false)
     setHighlighted(-1)
-    onChange(r)
+    onChange({ lat: r.lat, lng: r.lng, name: r.name, displayName: r.displayName })
     inputRef.current?.blur()
   }
 
   function handleClear() {
     setQuery('')
-    setResults([])
+    setApiResults([])
     setOpen(false)
     setSearched(false)
     onClear()
@@ -99,7 +130,8 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
     el?.scrollIntoView({ block: 'nearest' })
   }, [highlighted])
 
-  const showDropdown = open && (loading || results.length > 0 || (searched && query.length >= 2))
+  const showDropdown =
+    open && (loading || results.length > 0 || (searched && query.length >= 2))
 
   return (
     <div className={styles.wrap}>
@@ -135,12 +167,19 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
           {results.map((r, i) => (
             <li
               key={`${r.lat}-${r.lng}-${i}`}
-              className={`${styles.item} ${i === highlighted ? styles.itemHi : ''}`}
+              className={`${styles.item} ${i === highlighted ? styles.itemHi : ''} ${r.saved ? styles.itemSaved : ''}`}
               onMouseEnter={() => setHighlighted(i)}
               onMouseDown={(e) => { e.preventDefault(); select(r) }}
             >
-              <span className={styles.itemName}>{r.name}</span>
-              <span className={styles.itemDetail}>{r.displayName.split(',').slice(1).join(',').trim()}</span>
+              {r.saved && <span className={styles.itemBadge} aria-hidden>★</span>}
+              <div className={styles.itemBody}>
+                <span className={styles.itemName}>{r.name}</span>
+                <span className={styles.itemDetail}>
+                  {r.saved
+                    ? `${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}`
+                    : r.displayName.split(',').slice(1).join(',').trim()}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

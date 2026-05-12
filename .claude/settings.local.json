@@ -91,7 +91,8 @@
       "Bash(python -c 'import json; d=json.load\\(open\\(\"r.json\"\\)\\); print\\(\"OK dist_km=\",round\\(d[\"distance_m\"]/1000,1\\),\"curv=\",d[\"curvature_score\"],\"segs=\",len\\(d[\"segments\"]\\)\\)')",
       "Bash(powershell -c 'Get-PSDrive F | Select-Object @{n='\\\\''FreeGB'\\\\'';e={[math]::Round\\($_.Free/1GB,1\\)}}')",
       "Bash(mkdir -p /d/Docker/nominatim-data)",
-      "Read(//d/Docker/**)"
+      "Read(//d/Docker/**)",
+      "Bash(curl -s -m 8 'http://localhost/api/search?q=Berlin' -w '\\\\nHTTP=%{http_code}\\\\n')"
     ]
   }
 }
