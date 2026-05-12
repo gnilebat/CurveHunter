@@ -10,6 +10,10 @@ export const strings = {
   de: {
     panel: {
       brand: 'CurveHunter',
+      modeDirect: 'A → B',
+      modeRoundTrip: 'Rundkurs',
+      roundTripDistance: 'Distanz',
+      shuffleRoundTrip: 'Anderen Rundkurs würfeln',
       placeholderStart: 'Startpunkt',
       placeholderEnd: 'Zielort',
       placeholderVia: 'Zwischenziel',
@@ -177,6 +181,10 @@ export const strings = {
   en: {
     panel: {
       brand: 'CurveHunter',
+      modeDirect: 'A → B',
+      modeRoundTrip: 'Loop',
+      roundTripDistance: 'Distance',
+      shuffleRoundTrip: 'Shuffle loop',
       placeholderStart: 'Start point',
       placeholderEnd: 'Destination',
       placeholderVia: 'Via point',

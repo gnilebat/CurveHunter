@@ -1,0 +1,39 @@
+.wrap {
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.head {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.range {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+.line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.area {
+  fill: var(--accent);
+  opacity: 0.18;
+}

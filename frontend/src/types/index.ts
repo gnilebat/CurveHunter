@@ -106,6 +106,7 @@ export interface RouteResult {
   curvatureScore: number | null
   segments: RouteSegment[]
   instructions: Instruction[]
+  maxSpeedPerVertex: number[]
 }
 
 export interface SearchResult {

@@ -171,14 +171,15 @@ Built on top of the core, mostly without backend changes. **Status as of the cur
 - **Draggable waypoint markers** for fine-position tuning.
 - **GPX export** of the current route.
 - **Saved routes restore options atomically** (no race with auto-router).
+- **Round-trip / curvy loop generator** — pick a start + distance (10–300 km), get a closed loop. Uses GraphHopper's `round_trip` algorithm on the `motorcycle_curvy` profile, with a shuffle button for alternate seeds.
+- **Elevation profile chart** under the route stats — SVG line+area from the 3rd ordinate of `route.geometry`; shows ascent/descent + min/max elevation.
+- **Speed-limit overlay** during navigation — red-ring badge with the current edge's `max_speed`; pulses when the rider is more than 5 km/h over.
 
 ### Top of the backlog
 Sorted by impact / effort:
 
 | Idea | Why | Notes |
 |---|---|---|
-| **Round-trip / curvy loop generator** | The actual product differentiator | Needs Phase 2 ETL first; uses GraphHopper `round_trip` algorithm |
-| **Elevation profile chart** under the stats block | Riders care about climbs as much as curves | Data already present in `route.geometry` (3rd ordinate) |
 | **Route alternatives (2–3 candidates)** | "Curviest" optimisation often misses obvious good roads | GraphHopper `algorithm=alternative_route` |
 | **Share route via URL** | Default expectation for any modern route planner | Encode waypoints + options in query string |
 | **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | New gesture: click + drag on the route layer |
@@ -186,7 +187,7 @@ Sorted by impact / effort:
 | **Reverse whole sequence** | Current swap only flips start ↔ end | One-liner in `useRoute` |
 | **Recently used places** auto-history | Pair with saved-places UI | Capped list under a new key |
 | **PWA install prompt + service worker** | Offline shell + "Add to home screen" | `vite-plugin-pwa`, ~30 min |
-| **Speed-limit overlay** during nav | GraphHopper exposes `max_speed` per edge | Surface via the same details API used by curvature scoring |
+| **Speed-camera (Blitzer) overlay & voice alert** | Critical for riders in DE/AT — pre-warn at known fixed speed-cam locations | OSM `highway=speed_camera` nodes are public-domain; ingest into PostGIS, alert when within ~200 m and approaching. Note: mobile/temporary cameras aren't in OSM — would need an external feed |
 | **"Recentre" floating button** during nav | If the user pans away from their position | One button + `easeTo` to user pos |
 | **Pre-departure summary screen** | "212 km · 87 % Landstraße · 3 Pässe" before pressing Start | Aggregates existing route metadata |
 | **Curvature heatmap layer** on the bare map | Passive discovery of fun roads | Built once Phase 2 ETL fills PostGIS |
@@ -197,7 +198,6 @@ Sorted by impact / effort:
 
 ### Known limitations to revisit
 - PWA voice stops when the screen locks or app is backgrounded — covered by an in-UI warning today; Capacitor is the eventual fix.
-- Nominatim DB on D:\ via bind mount is functional but slower than a native Docker volume; first-time imports take ~2× longer.
 - Cross-device sync isn't possible without a backend account (Phase 4).
 
 ---

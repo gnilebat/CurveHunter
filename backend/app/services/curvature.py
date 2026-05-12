@@ -100,6 +100,21 @@ def build_urban_mask(
     return is_urban
 
 
+def build_max_speed_per_vertex(
+    n_coords: int,
+    max_speed_ranges: list
+) -> list[int]:
+    """Per-vertex max-speed in km/h (0 = untagged). For nav-time UI."""
+    speeds = [0] * n_coords
+    for entry in max_speed_ranges:
+        from_idx, to_idx, speed = entry[0], entry[1], entry[2]
+        if isinstance(speed, (int, float)) and speed > 0:
+            s = int(round(speed))
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                speeds[i] = s
+    return speeds
+
+
 def build_speed_below_mask(
     n_coords: int,
     max_speed_ranges: list,

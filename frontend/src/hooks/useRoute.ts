@@ -1,9 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { ApiError, fetchRoute } from '../api/client'
+import { ApiError, fetchRoute, type RoundTripParams } from '../api/client'
 import { DEFAULT_ROUTE_OPTIONS } from '../types'
 import type { Waypoint, RouteResult, RouteOptions } from '../types'
 
 const ROUTE_DEBOUNCE_MS = 450
+
+export interface RoundTripState {
+  enabled: boolean
+  distanceKm: number
+  seed?: number
+}
+
+const DEFAULT_ROUND_TRIP: RoundTripState = { enabled: false, distanceKm: 80 }
 
 export interface RouteError {
   key: string
@@ -36,14 +44,19 @@ export function useRoute() {
   const [options, setOptionsState] = useState<RouteOptions>(DEFAULT_ROUTE_OPTIONS)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<RouteError | null>(null)
+  const [roundTrip, setRoundTripState] = useState<RoundTripState>(DEFAULT_ROUND_TRIP)
   const reqId = useRef(0)
 
-  const planRoute = useCallback(async (pts: Waypoint[], opts: RouteOptions) => {
+  const planRoute = useCallback(async (
+    pts: Waypoint[],
+    opts: RouteOptions,
+    rt?: RoundTripParams
+  ) => {
     const id = ++reqId.current
     setLoading(true)
     setError(null)
     try {
-      const result = await fetchRoute(pts, opts)
+      const result = await fetchRoute(pts, opts, rt)
       if (id === reqId.current) setRoute(result)
     } catch (err) {
       if (id === reqId.current) {
@@ -55,13 +68,23 @@ export function useRoute() {
     }
   }, [])
 
-  // Debounced auto-route: only fires when all waypoints are set
+  // Debounced auto-route. In round-trip mode we just need the start waypoint;
+  // in point-to-point mode we need every waypoint set.
   useEffect(() => {
+    if (roundTrip.enabled) {
+      const start = waypoints[0]
+      if (!start) { setRoute(null); return }
+      const timer = setTimeout(
+        () => planRoute([start], options, { distanceKm: roundTrip.distanceKm, seed: roundTrip.seed }),
+        ROUTE_DEBOUNCE_MS
+      )
+      return () => clearTimeout(timer)
+    }
     const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
     if (!allSet) { setRoute(null); return }
     const timer = setTimeout(() => planRoute(waypoints as Waypoint[], options), ROUTE_DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [waypoints, options, planRoute])
+  }, [waypoints, options, roundTrip, planRoute])
 
   const setWaypoint = useCallback((idx: number, wp: Waypoint | null) => {
     setWaypointsState(prev => prev.map((p, i) => (i === idx ? wp : p)))
@@ -111,15 +134,28 @@ export function useRoute() {
   }, [])
 
   const retry = useCallback(() => {
+    if (roundTrip.enabled && waypoints[0]) {
+      planRoute([waypoints[0]], options, { distanceKm: roundTrip.distanceKm, seed: roundTrip.seed })
+      return
+    }
     const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
     if (allSet) planRoute(waypoints as Waypoint[], options)
-  }, [waypoints, options, planRoute])
+  }, [waypoints, options, roundTrip, planRoute])
+
+  const setRoundTrip = useCallback((rt: Partial<RoundTripState>) => {
+    setRoundTripState(prev => ({ ...prev, ...rt }))
+  }, [])
+
+  const reshuffleRoundTrip = useCallback(() => {
+    setRoundTripState(prev => ({ ...prev, seed: Math.floor(Math.random() * 1_000_000) }))
+  }, [])
 
   return {
-    waypoints, route, loading, error, options,
+    waypoints, route, loading, error, options, roundTrip,
     setWaypoint,
     insertWaypointBefore, insertWaypointAfter, removeWaypoint,
     setOption, setOptions,
+    setRoundTrip, reshuffleRoundTrip,
     swap, clearAll, loadRoute, prependWaypoint, retry
   }
 }

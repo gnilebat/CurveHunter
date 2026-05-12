@@ -49,11 +49,18 @@ interface RouteApiResponse {
     interval: [number, number]
   }[]
   ignored_urban: boolean
+  max_speed_per_vertex: number[]
+}
+
+export interface RoundTripParams {
+  distanceKm: number
+  seed?: number
 }
 
 export async function fetchRoute(
   waypoints: Waypoint[],
-  opts: RouteOptions
+  opts: RouteOptions,
+  roundTrip?: RoundTripParams
 ): Promise<RouteResult> {
   const r = await apiFetch<RouteApiResponse>('/route', {
     method: 'POST',
@@ -67,7 +74,10 @@ export async function fetchRoute(
         ignore_urban_curves: opts.ignoreUrbanCurves,
         min_curve_speed: opts.minCurveSpeed,
         avoid_unpaved: opts.avoidUnpaved
-      }
+      },
+      ...(roundTrip
+        ? { round_trip: { distance_km: roundTrip.distanceKm, seed: roundTrip.seed ?? null } }
+        : {})
     })
   })
   const segments: RouteSegment[] = r.segments.map(s => ({
@@ -95,7 +105,8 @@ export async function fetchRoute(
       sign: i.sign,
       streetName: i.street_name,
       interval: i.interval
-    }))
+    })),
+    maxSpeedPerVertex: r.max_speed_per_vertex ?? []
   }
 }
 

@@ -5,7 +5,7 @@ from app.services.graphhopper import RoutingRequestError
 from app.services.curvature import (
     overall_curvature, segment_curvature,
     build_urban_mask, build_highway_mask, build_speed_below_mask,
-    build_class_mask, length_in_mask_m
+    build_class_mask, length_in_mask_m, build_max_speed_per_vertex
 )
 
 router = APIRouter()
@@ -27,9 +27,15 @@ class RouteOptions(BaseModel):
     avoid_unpaved: bool = True
 
 
+class RoundTripRequest(BaseModel):
+    distance_km: float = Field(..., ge=5, le=500)
+    seed: int | None = None
+
+
 class RouteRequest(BaseModel):
-    waypoints: list[WaypointIn] = Field(..., min_length=2)
+    waypoints: list[WaypointIn] = Field(..., min_length=1)
     options: RouteOptions = RouteOptions()
+    round_trip: RoundTripRequest | None = None
 
 
 class RouteSegment(BaseModel):
@@ -62,10 +68,16 @@ class RouteResponse(BaseModel):
     segments: list[RouteSegment]
     instructions: list[Instruction]
     ignored_urban: bool
+    max_speed_per_vertex: list[int]
 
 
 @router.post("/route", response_model=RouteResponse)
 async def plan_route(req: RouteRequest):
+    if req.round_trip is None and len(req.waypoints) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail="At least 2 waypoints required for point-to-point routing"
+        )
     try:
         gh = await graphhopper.route(
             points=[(w.lat, w.lng) for w in req.waypoints],
@@ -75,7 +87,11 @@ async def plan_route(req: RouteRequest):
             avoid_urban=req.options.avoid_urban,
             ignore_urban_curves=req.options.ignore_urban_curves,
             min_curve_speed=req.options.min_curve_speed,
-            avoid_unpaved=req.options.avoid_unpaved
+            avoid_unpaved=req.options.avoid_unpaved,
+            round_trip_distance_m=(
+                int(req.round_trip.distance_km * 1000) if req.round_trip else None
+            ),
+            round_trip_seed=req.round_trip.seed if req.round_trip else None
         )
     except RoutingRequestError as e:
         raise HTTPException(
@@ -145,6 +161,11 @@ async def plan_route(req: RouteRequest):
         for i in path.get("instructions", [])
     ]
 
+    max_speed_per_vertex = build_max_speed_per_vertex(
+        n_coords=n,
+        max_speed_ranges=details.get("max_speed", [])
+    )
+
     return RouteResponse(
         geometry=path["points"],
         distance_m=path.get("distance", 0),
@@ -156,5 +177,6 @@ async def plan_route(req: RouteRequest):
         curvature_score=round(score, 1),
         segments=[RouteSegment(**s) for s in segments],
         instructions=instructions,
-        ignored_urban=req.options.ignore_urban_curves
+        ignored_urban=req.options.ignore_urban_curves,
+        max_speed_per_vertex=max_speed_per_vertex
     )

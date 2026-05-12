@@ -11,6 +11,7 @@ import { SearchInput } from './SearchInput'
 import { Slider } from './Slider'
 import { StepSlider } from './StepSlider'
 import { InfoIcon } from './InfoIcon'
+import { ElevationChart } from './ElevationChart'
 import { useLocale } from '../i18n/LocaleProvider'
 import { LOCALES } from '../i18n/strings'
 import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
@@ -48,6 +49,12 @@ interface Props {
 
   panelHeight: number
   onPanelHeightChange: (h: number) => void
+
+  roundTripEnabled: boolean
+  roundTripDistanceKm: number
+  onToggleRoundTrip: (on: boolean) => void
+  onRoundTripDistance: (km: number) => void
+  onReshuffleRoundTrip: () => void
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -72,6 +79,15 @@ function toWaypoint(r: SearchResult): Waypoint {
   return { lat: r.lat, lng: r.lng, name: r.name }
 }
 
+// Rough estimate at curvy-touring pace (~50 km/h). Just an info string.
+function formatRoundTripDuration(km: number, t: (k: string) => string): string {
+  const minutes = Math.round((km / 50) * 60)
+  if (minutes < 60) return `${minutes} ${t('nav.minShort')}`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h} ${t('nav.hourShort')}` : `${h} ${t('nav.hourShort')} ${m} ${t('nav.minShort')}`
+}
+
 export function RoutePanel({
   waypoints, route, loading, error, options,
   onWaypointChange, onInsertAfter, onRemove,
@@ -83,7 +99,9 @@ export function RoutePanel({
   customPresets, activeCustomPresetId,
   onApplyCustomPreset, onDeleteCustomPreset,
   onOpenMenu, onSavePlace, onSaveRoute, onSavePreset, onExportGpx,
-  panelHeight, onPanelHeightChange
+  panelHeight, onPanelHeightChange,
+  roundTripEnabled, roundTripDistanceKm,
+  onToggleRoundTrip, onRoundTripDistance, onReshuffleRoundTrip
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -141,7 +159,9 @@ export function RoutePanel({
     return `${Math.round(score)} (${t('panel.curvyTwisty')})`
   }
 
-  const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
+  const allSet = roundTripEnabled
+    ? waypoints[0] !== null
+    : waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
 
   function dotColor(idx: number) {
@@ -194,10 +214,26 @@ export function RoutePanel({
         <span className={styles.logoText}>{t('panel.brand')}</span>
       </header>
 
+      <div className={styles.modeRow} role="tablist">
+        <button
+          className={`${styles.modeBtn} ${!roundTripEnabled ? styles.modeBtnActive : ''}`}
+          onClick={() => onToggleRoundTrip(false)}
+          aria-pressed={!roundTripEnabled}
+          role="tab"
+        >{t('panel.modeDirect')}</button>
+        <button
+          className={`${styles.modeBtn} ${roundTripEnabled ? styles.modeBtnActive : ''}`}
+          onClick={() => onToggleRoundTrip(true)}
+          aria-pressed={roundTripEnabled}
+          role="tab"
+        >{t('panel.modeRoundTrip')}</button>
+      </div>
+
       <div className={styles.inputsBlock}>
         {waypoints.map((wp, idx) => {
+          if (roundTripEnabled && idx > 0) return null
           const isFirst = idx === 0
-          const isLast = idx === waypoints.length - 1
+          const isLast = roundTripEnabled ? true : idx === waypoints.length - 1
           const isIntermediate = !isFirst && !isLast
           return (
             <Fragment key={idx}>
@@ -270,14 +306,43 @@ export function RoutePanel({
             </Fragment>
           )
         })}
-        <button
-          className={styles.swapBtn}
-          onClick={onSwap}
-          disabled={!anyWaypointSet}
-          title={t('panel.swap')}
-          aria-label={t('panel.swap')}
-        >⇅</button>
+        {!roundTripEnabled && (
+          <button
+            className={styles.swapBtn}
+            onClick={onSwap}
+            disabled={!anyWaypointSet}
+            title={t('panel.swap')}
+            aria-label={t('panel.swap')}
+          >⇅</button>
+        )}
       </div>
+
+      {roundTripEnabled && (
+        <div className={styles.roundTripBlock}>
+          <div className={styles.roundTripHead}>
+            <span className={styles.roundTripLabel}>
+              {t('panel.roundTripDistance')} —
+              <b> {Math.round(roundTripDistanceKm)} km</b>
+              <span className={styles.roundTripEta}> · ≈ {formatRoundTripDuration(roundTripDistanceKm, t)}</span>
+            </span>
+            <button
+              className={styles.roundTripShuffle}
+              onClick={onReshuffleRoundTrip}
+              title={t('panel.shuffleRoundTrip')}
+              aria-label={t('panel.shuffleRoundTrip')}
+            >⟲</button>
+          </div>
+          <input
+            type="range"
+            min={10}
+            max={300}
+            step={5}
+            value={roundTripDistanceKm}
+            onChange={(e) => onRoundTripDistance(Number(e.target.value))}
+            className={styles.roundTripRange}
+          />
+        </div>
+      )}
 
       <div className={styles.presetRow} role="group">
         {PRESET_ORDER.map((id) => (
@@ -461,6 +526,8 @@ export function RoutePanel({
               <span className={styles.statValue}>{curvyLabel(route.curvatureScore)}</span>
             </div>
           </div>
+
+          <ElevationChart route={route} />
 
           {(route.motorwayM > 0 || route.trunkM > 0) && (
             <div className={styles.breakdown}>

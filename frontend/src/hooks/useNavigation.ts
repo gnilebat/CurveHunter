@@ -26,6 +26,7 @@ export interface NavigationState {
   distanceRemainingM: number
   durationRemainingS: number
   offRoute: boolean
+  currentMaxSpeed: number  // 0 = unknown / untagged
 }
 
 function haversineM(a: [number, number], b: [number, number]): number {
@@ -116,7 +117,8 @@ export function useNavigation(
         distanceToNextTurnM: 0,
         distanceRemainingM: 0,
         durationRemainingS: 0,
-        offRoute: false
+        offRoute: false,
+        currentMaxSpeed: 0
       }
     }
 
@@ -166,6 +168,8 @@ export function useNavigation(
     const fractionRemaining = distanceRemainingM / Math.max(route.distanceM, 1)
     const durationRemainingS = route.durationS * fractionRemaining
 
+    const currentMaxSpeed = route.maxSpeedPerVertex?.[idx] ?? 0
+
     return {
       active,
       userPos,
@@ -174,7 +178,8 @@ export function useNavigation(
       distanceToNextTurnM,
       distanceRemainingM,
       durationRemainingS,
-      offRoute
+      offRoute,
+      currentMaxSpeed
     }
   })()
 

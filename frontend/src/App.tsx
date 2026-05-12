@@ -48,9 +48,10 @@ function roundDistance(m: number): { value: number; unit: 'm' | 'km' } {
 
 export default function App() {
   const {
-    waypoints, route, loading, error, options,
+    waypoints, route, loading, error, options, roundTrip,
     setWaypoint, insertWaypointAfter, removeWaypoint,
-    setOption, setOptions, swap, clearAll, loadRoute, prependWaypoint, retry
+    setOption, setOptions, setRoundTrip, reshuffleRoundTrip,
+    swap, clearAll, loadRoute, prependWaypoint, retry
   } = useRoute()
 
   const tts = useTTS()
@@ -257,6 +258,11 @@ export default function App() {
           onExportGpx={handleExportGpx}
           panelHeight={panelHeight}
           onPanelHeightChange={setPanelHeight}
+          roundTripEnabled={roundTrip.enabled}
+          roundTripDistanceKm={roundTrip.distanceKm}
+          onToggleRoundTrip={(on) => setRoundTrip({ enabled: on })}
+          onRoundTripDistance={(km) => setRoundTrip({ distanceKm: km })}
+          onReshuffleRoundTrip={reshuffleRoundTrip}
         />
       )}
       <div className="map-wrap">
@@ -287,6 +293,7 @@ export default function App() {
             voiceAvailable={tts.available}
             onToggleVoice={() => tts.setEnabled(!tts.enabled)}
             recalculating={loading}
+            maxSpeed={nav.currentMaxSpeed}
           />
         )}
         {nav.active && debugNav && (

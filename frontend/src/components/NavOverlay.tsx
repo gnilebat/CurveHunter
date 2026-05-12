@@ -21,6 +21,7 @@ interface Props {
   voiceAvailable: boolean
   onToggleVoice: () => void
   recalculating: boolean
+  maxSpeed: number   // 0 = unknown
 }
 
 // GraphHopper sign → translation key under `nav.verb`
@@ -50,7 +51,7 @@ export function NavOverlay({
   distanceToNextTurnM, distanceRemainingM, durationRemainingS, speedMs,
   offRoute, arrived, onStop, onRecalculate,
   voiceEnabled, voiceAvailable, onToggleVoice,
-  recalculating
+  recalculating, maxSpeed
 }: Props) {
   const { t, locale } = useLocale()
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
@@ -219,6 +220,15 @@ export function NavOverlay({
           </button>
         </div>
       )}
+
+      {maxSpeed > 0 && (() => {
+        const over = speedKmh !== null && speedKmh > maxSpeed + 5
+        return (
+          <div className={`${styles.limitBadge} ${over ? styles.limitOver : ''}`}>
+            <span className={styles.limitNum}>{maxSpeed}</span>
+          </div>
+        )
+      })()}
 
       {speedKmh !== null && (
         <div className={styles.speedBadge}>

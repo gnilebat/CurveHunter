@@ -239,6 +239,33 @@
 
 /* ── Speed badge (bottom-left, above panel) ────────────────────────────────── */
 
+.limitBadge {
+  position: absolute;
+  bottom: 96px;
+  left: 88px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fff;
+  border: 5px solid #dc2626;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: box-shadow 0.2s;
+}
+.limitOver {
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.35), 0 6px 18px rgba(220, 38, 38, 0.4);
+}
+.limitNum {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 .speedBadge {
   position: absolute;
   bottom: 96px;

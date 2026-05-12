@@ -112,11 +112,17 @@ async def route(
     avoid_urban: float,
     ignore_urban_curves: bool,
     min_curve_speed: int,
-    avoid_unpaved: bool
+    avoid_unpaved: bool,
+    round_trip_distance_m: int | None = None,
+    round_trip_seed: int | None = None
 ) -> dict[str, Any]:
-    use_defaults = _is_default(
-        curviness, avoid_motorways, avoid_trunks, avoid_urban,
-        ignore_urban_curves, min_curve_speed, avoid_unpaved
+    is_round_trip = round_trip_distance_m is not None
+
+    use_defaults = (
+        not is_round_trip and _is_default(
+            curviness, avoid_motorways, avoid_trunks, avoid_urban,
+            ignore_urban_curves, min_curve_speed, avoid_unpaved
+        )
     )
 
     payload: dict[str, Any] = {
@@ -132,12 +138,20 @@ async def route(
     if use_defaults:
         payload["profile"] = "motorcycle"
     else:
+        # Round-trip and customised routing both need the flexible (non-CH)
+        # solver. CH is fastest but only supports default profile weighting.
         payload["profile"] = "motorcycle_curvy"
         payload["ch.disable"] = True
         payload["custom_model"] = build_custom_model(
             curviness, avoid_motorways, avoid_trunks, avoid_urban,
             ignore_urban_curves, min_curve_speed, avoid_unpaved
         )
+
+    if is_round_trip:
+        payload["algorithm"] = "round_trip"
+        payload["round_trip.distance"] = round_trip_distance_m
+        if round_trip_seed is not None:
+            payload["round_trip.seed"] = round_trip_seed
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(f"{GH_URL}/route", json=payload)
