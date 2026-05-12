@@ -48,7 +48,7 @@ export default function App() {
   const {
     waypoints, route, loading, error, options,
     setWaypoint, insertWaypointAfter, removeWaypoint,
-    setOption, setOptions, swap, clearAll, retry
+    setOption, setOptions, swap, clearAll, loadRoute, retry
   } = useRoute()
 
   const tts = useTTS()
@@ -115,16 +115,8 @@ export default function App() {
   }, [pendingSave, waypoints, options, savedRoutes, savedPlaces, customPresets])
 
   const applySavedRoute = useCallback((r: SavedRoute) => {
-    clearAll()
-    // Replace all waypoints in one go — setWaypoint operates by index, so we
-    // need to make room first. clearAll() resets to [null, null]; insertAfter
-    // pads up to the right length.
-    setTimeout(() => {
-      for (let i = 2; i < r.waypoints.length; i++) insertWaypointAfter(i - 1)
-      r.waypoints.forEach((w, i) => setWaypoint(i, w))
-      setOptions(r.options)
-    }, 0)
-  }, [clearAll, insertWaypointAfter, setWaypoint, setOptions])
+    loadRoute(r.waypoints, r.options)
+  }, [loadRoute])
 
   const applySavedPlace = useCallback((p: SavedPlace) => {
     const emptyIdx = waypoints.findIndex(w => w === null)

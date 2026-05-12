@@ -95,6 +95,15 @@ export function useRoute() {
     setError(null)
   }, [])
 
+  // Replace waypoints and options atomically (used when loading a saved route).
+  // Single-tick state update — no race between option set and auto-router.
+  const loadRoute = useCallback((wps: Waypoint[], opts: RouteOptions) => {
+    setWaypointsState(wps.length >= 2 ? wps : [...wps, null])
+    setOptionsState(opts)
+    setRoute(null)
+    setError(null)
+  }, [])
+
   const retry = useCallback(() => {
     const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
     if (allSet) planRoute(waypoints as Waypoint[], options)
@@ -105,6 +114,6 @@ export function useRoute() {
     setWaypoint,
     insertWaypointBefore, insertWaypointAfter, removeWaypoint,
     setOption, setOptions,
-    swap, clearAll, retry
+    swap, clearAll, loadRoute, retry
   }
 }
