@@ -104,6 +104,7 @@
 .menuBtn {
   width: 40px;
   height: 40px;
+  margin-left: auto;
   border-radius: 10px;
   border: none;
   background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));

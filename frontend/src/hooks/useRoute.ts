@@ -104,6 +104,15 @@ export function useRoute() {
     setWaypointsState(prev => [wp, ...prev])
   }, [])
 
+  // Insert a populated waypoint at an arbitrary index (existing items shift).
+  // Used when the user drags the route line to add a via point.
+  const insertWaypointAt = useCallback((idx: number, wp: Waypoint) => {
+    setWaypointsState(prev => {
+      const clamped = Math.min(Math.max(idx, 0), prev.length)
+      return [...prev.slice(0, clamped), wp, ...prev.slice(clamped)]
+    })
+  }, [])
+
   const removeWaypoint = useCallback((idx: number) => {
     setWaypointsState(prev => (prev.length > 2 ? prev.filter((_, i) => i !== idx) : prev))
   }, [])
@@ -156,6 +165,6 @@ export function useRoute() {
     insertWaypointBefore, insertWaypointAfter, removeWaypoint,
     setOption, setOptions,
     setRoundTrip, reshuffleRoundTrip,
-    swap, clearAll, loadRoute, prependWaypoint, retry
+    swap, clearAll, loadRoute, prependWaypoint, insertWaypointAt, retry
   }
 }

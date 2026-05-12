@@ -51,7 +51,7 @@ export default function App() {
     waypoints, route, loading, error, options, roundTrip,
     setWaypoint, insertWaypointAfter, removeWaypoint,
     setOption, setOptions, setRoundTrip, reshuffleRoundTrip,
-    swap, clearAll, loadRoute, prependWaypoint, retry
+    swap, clearAll, loadRoute, prependWaypoint, insertWaypointAt, retry
   } = useRoute()
 
   const tts = useTTS()
@@ -207,6 +207,11 @@ export default function App() {
     }
   }, [nav.active, waypoints, setWaypoint])
 
+  const handleRouteDragInsert = useCallback((insertIdx: number, lat: number, lng: number) => {
+    const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    insertWaypointAt(insertIdx, { lat, lng, name })
+  }, [insertWaypointAt])
+
   const handleWaypointDragEnd = useCallback((idx: number, lat: number, lng: number) => {
     // Replace the dragged waypoint with the new position. Name becomes a
     // coordinate stamp so it's clear it was hand-placed rather than searched.
@@ -271,6 +276,7 @@ export default function App() {
           route={route}
           onMapClick={handleMapClick}
           onWaypointDragEnd={nav.active ? undefined : handleWaypointDragEnd}
+          onRouteDragInsert={nav.active ? undefined : handleRouteDragInsert}
           followUser={nav.active}
           userPos={nav.userPos}
           dimUrbanSegments={options.ignoreUrbanCurves}

@@ -40,6 +40,9 @@ interface Props {
   onMapClick?: (lat: number, lng: number) => void
   /** Fires after the user drags a waypoint marker and releases it. */
   onWaypointDragEnd?: (idx: number, lat: number, lng: number) => void
+  /** Fires when the user drags the route polyline and drops it — adds a new
+      via waypoint at the insertion index. */
+  onRouteDragInsert?: (insertIdx: number, lat: number, lng: number) => void
   followUser?: boolean
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
@@ -92,7 +95,8 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
 ] as maplibregl.ExpressionSpecification
 
 export function Map({
-  waypoints, route, onMapClick, onWaypointDragEnd, followUser, userPos,
+  waypoints, route, onMapClick, onWaypointDragEnd, onRouteDragInsert,
+  followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
   bottomInset = 0
 }: Props) {
@@ -224,11 +228,117 @@ export function Map({
     const map = mapRef.current
     if (!map || !onMapClick) return
     const handler = (e: maplibregl.MapMouseEvent) => {
+      // Suppress clicks on the route line — those are handled by the
+      // drag-to-add-via gesture below.
+      if (map.getLayer('route-line')) {
+        const hits = map.queryRenderedFeatures(e.point, { layers: ['route-line'] })
+        if (hits.length > 0) return
+      }
       onMapClick(e.lngLat.lat, e.lngLat.lng)
     }
     map.on('click', handler)
     return () => { map.off('click', handler) }
   }, [onMapClick])
+
+  // Drag the route polyline to insert a new via waypoint at the drop point.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !route || !onRouteDragInsert || followUser) return
+    const coords = route.geometry.coordinates as number[][]
+    if (coords.length === 0) return
+
+    // For each non-null user waypoint, find the closest geometry vertex —
+    // those anchor indices split the polyline into per-leg ranges so we know
+    // which leg a drop falls on.
+    const validWps = waypoints.filter((w): w is Waypoint => w !== null)
+    const wpAnchors = validWps.map(w => {
+      let best = 0, bestD = Infinity
+      for (let i = 0; i < coords.length; i++) {
+        const dx = coords[i][0] - w.lng, dy = coords[i][1] - w.lat
+        const d = dx * dx + dy * dy
+        if (d < bestD) { bestD = d; best = i }
+      }
+      return best
+    })
+
+    let dragging = false
+    let draft: maplibregl.Marker | null = null
+    const canvas = map.getCanvas()
+
+    const cleanup = () => {
+      dragging = false
+      map.dragPan.enable()
+      canvas.style.cursor = ''
+      if (draft) { draft.remove(); draft = null }
+    }
+
+    const onLineEnter = () => { if (!dragging) canvas.style.cursor = 'grab' }
+    const onLineLeave = () => { if (!dragging) canvas.style.cursor = '' }
+
+    const onLineDown = (e: maplibregl.MapMouseEvent) => {
+      e.preventDefault()
+      dragging = true
+      map.dragPan.disable()
+      canvas.style.cursor = 'grabbing'
+
+      const el = document.createElement('div')
+      el.style.cssText =
+        'width:16px;height:16px;border-radius:50%;' +
+        'background:#3b82f6;border:3px solid #fff;' +
+        'box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 4px 10px rgba(0,0,0,.4);' +
+        'pointer-events:none;'
+      draft = new maplibregl.Marker({ element: el })
+        .setLngLat(e.lngLat)
+        .addTo(map)
+    }
+
+    const onMove = (e: maplibregl.MapMouseEvent) => {
+      if (!dragging || !draft) return
+      draft.setLngLat(e.lngLat)
+    }
+
+    const onUp = (e: maplibregl.MapMouseEvent) => {
+      if (!dragging) return
+      const lng = e.lngLat.lng, lat = e.lngLat.lat
+      cleanup()
+
+      // Snap drop to the closest vertex on the route polyline.
+      let dropIdx = 0, bestD = Infinity
+      for (let i = 0; i < coords.length; i++) {
+        const dx = coords[i][0] - lng, dy = coords[i][1] - lat
+        const d = dx * dx + dy * dy
+        if (d < bestD) { bestD = d; dropIdx = i }
+      }
+
+      // Figure out which leg the drop is in → insertion position.
+      let insertAt = -1
+      for (let i = 0; i < wpAnchors.length - 1; i++) {
+        if (dropIdx >= wpAnchors[i] && dropIdx <= wpAnchors[i + 1]) {
+          insertAt = i + 1
+          break
+        }
+      }
+      if (insertAt < 1 || insertAt >= validWps.length) return  // outside any leg
+      onRouteDragInsert(insertAt, lat, lng)
+    }
+
+    // MapLibre emits emulated mouse events for touch input too, so these
+    // listeners cover both desktop and mobile without separate touch wiring.
+    map.on('mouseenter', 'route-line', onLineEnter)
+    map.on('mouseleave', 'route-line', onLineLeave)
+    map.on('mousedown', 'route-line', onLineDown)
+    map.on('mousemove', onMove)
+    map.on('mouseup', onUp)
+
+    return () => {
+      map.off('mouseenter', 'route-line', onLineEnter)
+      map.off('mouseleave', 'route-line', onLineLeave)
+      map.off('mousedown', 'route-line', onLineDown)
+      map.off('mousemove', onMove)
+      map.off('mouseup', onUp)
+      cleanup()
+    }
+  }, [route, waypoints, onRouteDragInsert, followUser])
 
   useEffect(() => {
     const map = mapRef.current

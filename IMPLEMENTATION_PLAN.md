@@ -180,6 +180,8 @@ Sorted by impact / effort:
 
 | Idea | Why | Notes |
 |---|---|---|
+| **🔴 High priority — Data refresh / update pipeline** | All three datasets (PMTiles, GraphHopper graph, Photon index) currently freeze at their initial download date. After a few months OSM data drifts, new roads / closed roads are wrong. Need an investigation + implementation of a refresh strategy so the app stays current without manual rebuilds. | Three pieces to investigate: 1) **PMTiles** — re-download `map.pmtiles` periodically (monthly?) from a self-built tile generator (`tilemaker`) or Protomaps. 2) **GraphHopper** — automate `docker compose down graphhopper`, wipe `graphhopper-cache`, drop a fresh Geofabrik PBF, `up` again to re-import. 3) **Photon** — re-download the planet/country tarball and replace the bind-mounted folder. Schedule via cron / systemd timer / a tiny "refresh-job" Docker service. Open questions: rolling reload without downtime, atomic swap of vhdx data, OSM diff-replication option (vs. full re-import). |
+| **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | ✅ shipped — see Done list |
 | **Route alternatives (2–3 candidates)** | "Curviest" optimisation often misses obvious good roads | GraphHopper `algorithm=alternative_route` |
 | **Share route via URL** | Default expectation for any modern route planner | Encode waypoints + options in query string |
 | **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | New gesture: click + drag on the route layer |

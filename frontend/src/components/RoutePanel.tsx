@@ -198,6 +198,15 @@ export function RoutePanel({
         </div>
       )}
       <header className={styles.header}>
+        <span className={styles.logoIcon} aria-hidden>
+          <svg width="28" height="28" viewBox="0 0 64 64">
+            <rect width="64" height="64" rx="14" fill="#f59e0b" />
+            <path d="M14 50 C 24 42 24 28 32 26 S 40 18 48 14"
+                  fill="none" stroke="#ffffff" strokeWidth="7"
+                  strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className={styles.logoText}>{t('panel.brand')}</span>
         <button
           className={styles.menuBtn}
           onClick={onOpenMenu}
@@ -210,15 +219,6 @@ export function RoutePanel({
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <span className={styles.logoIcon} aria-hidden>
-          <svg width="28" height="28" viewBox="0 0 64 64">
-            <rect width="64" height="64" rx="14" fill="#f59e0b" />
-            <path d="M14 50 C 24 42 24 28 32 26 S 40 18 48 14"
-                  fill="none" stroke="#ffffff" strokeWidth="7"
-                  strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
-        <span className={styles.logoText}>{t('panel.brand')}</span>
       </header>
 
       <div className={styles.modeRow} role="tablist">
