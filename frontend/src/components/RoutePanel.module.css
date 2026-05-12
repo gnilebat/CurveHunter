@@ -106,20 +106,20 @@
   height: 40px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 8px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 .menuBtn:hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
-  box-shadow: 0 5px 12px rgba(249, 115, 22, 0.5);
+  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.45);
 }
 .menuBtn:active { transform: translateY(0); }
 .menuBtn svg { width: 22px; height: 22px; stroke-width: 2.4; }
@@ -136,7 +136,7 @@
 .logoText {
   font-size: 20px;
   font-weight: 700;
-  color: #f97316;
+  color: var(--accent);
   letter-spacing: -0.5px;
 }
 
@@ -164,7 +164,7 @@
 .modeBtnActive {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
 }
 .modeBtnActive:hover { color: #fff; }
 
@@ -281,8 +281,8 @@
 
 .iconBtn:hover:not(:disabled) {
   background: #fff7ed;
-  border-color: #f97316;
-  color: #f97316;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .iconBtn:disabled {
@@ -314,8 +314,8 @@
 
 .swapBtn:hover:not(:disabled) {
   background: #fff7ed;
-  border-color: #f97316;
-  color: #f97316;
+  border-color: var(--accent);
+  color: var(--accent);
   transform: rotate(180deg);
 }
 
@@ -504,7 +504,7 @@
   padding: 12px 14px;
   background: transparent;
   border: none;
-  border-left: 3px solid #2563eb;
+  border-left: 3px solid var(--secondary-hover);
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
@@ -520,7 +520,7 @@
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -583,8 +583,8 @@
 }
 
 .resetBtn:hover {
-  border-color: #f97316;
-  color: #f97316;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .primaryBtn {
@@ -592,7 +592,7 @@
   padding: 10px 14px;
   border: none;
   border-radius: 8px;
-  background: #f97316;
+  background: var(--accent);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -601,7 +601,7 @@
 }
 
 .primaryBtn:hover:not(:disabled) {
-  background: #ea580c;
+  background: var(--accent-hover);
 }
 
 .primaryBtn:disabled {

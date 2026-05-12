@@ -212,7 +212,7 @@ export function RoutePanel({
         </button>
         <span className={styles.logoIcon} aria-hidden>
           <svg width="28" height="28" viewBox="0 0 64 64">
-            <rect width="64" height="64" rx="14" fill="#f97316" />
+            <rect width="64" height="64" rx="14" fill="#f59e0b" />
             <path d="M14 50 C 24 42 24 28 32 26 S 40 18 48 14"
                   fill="none" stroke="#ffffff" strokeWidth="7"
                   strokeLinecap="round" strokeLinejoin="round" />

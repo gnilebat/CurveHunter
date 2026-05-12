@@ -16,8 +16,8 @@
 }
 
 .input:focus {
-  border-color: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
 }
 
 .inputSelected {
@@ -37,7 +37,7 @@
   width: 14px;
   height: 14px;
   border: 2px solid #e5e7eb;
-  border-top-color: #f97316;
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   pointer-events: none;
@@ -108,7 +108,7 @@
 
 .itemHi {
   background: #fff7ed;
-  border-left-color: #f97316;
+  border-left-color: var(--accent);
 }
 
 .itemSaved {

@@ -62,8 +62,13 @@ services:
   photon:
     image: rtuszik/photon-docker:latest
     restart: unless-stopped
+    environment:
+      # Don't auto-download — we drop the pre-built Germany index into the
+      # bind-mounted folder ourselves.
+      UPDATE_STRATEGY: NEVER
+      FORCE_UPDATE: "false"
     volumes:
-      - photon-data:/photon/photon_data
+      - photon-data:/photon/data
     profiles: ["geocoder"]   # don't start with the default `docker compose up`
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:2322/api?q=ping >/dev/null || exit 1"]
