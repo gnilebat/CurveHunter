@@ -100,13 +100,6 @@ export function RoutePanel({
   }, [])
 
   const dragState = useRef({ startY: 0, startH: 0, dragging: false })
-  function snap(h: number): number {
-    const vh = window.innerHeight
-    const points = [Math.round(vh * 0.12), Math.round(vh * 0.55), Math.round(vh * 0.92)]
-    let best = points[0]
-    for (const p of points) if (Math.abs(p - h) < Math.abs(best - h)) best = p
-    return best
-  }
   function onHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!isMobile) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -125,7 +118,6 @@ export function RoutePanel({
     if (!dragState.current.dragging) return
     dragState.current.dragging = false
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-    setPanelHeight(h => snap(h))
   }
 
   function useMyLocation() {
