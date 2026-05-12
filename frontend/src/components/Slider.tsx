@@ -11,20 +11,33 @@ interface Props {
   markerAt?: number
   /** Optional warning shown only when value > markerAt. */
   warningOverMarker?: string
+  /** Apply a fun colour-shifting fill and a pulsing glow past the marker. */
+  intense?: boolean
 }
 
 export function Slider({
   label, hint, value, onChange,
-  step = 0.05, max = 1, markerAt, warningOverMarker
+  step = 0.05, max = 1, markerAt, warningOverMarker, intense
 }: Props) {
   const pct = Math.round(value * 100)
   const fillPct = Math.round((value / max) * 100)
   const markerPct = markerAt !== undefined ? Math.round((markerAt / max) * 100) : null
   const showWarning =
     markerAt !== undefined && warningOverMarker && value > markerAt
+  const isHot = intense && markerAt !== undefined && value > markerAt
+  const intensity = intense ? Math.min(1, value / max) : 0
+
+  const wrapClasses = [
+    styles.wrap,
+    intense ? styles.intense : '',
+    isHot ? styles.hot : ''
+  ].filter(Boolean).join(' ')
 
   return (
-    <div className={styles.wrap}>
+    <div
+      className={wrapClasses}
+      style={{ '--intensity': intensity } as React.CSSProperties}
+    >
       <div className={styles.head}>
         <span className={styles.label}>{label}</span>
         <span className={styles.value}>{pct}%</span>

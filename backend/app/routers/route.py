@@ -24,6 +24,7 @@ class RouteOptions(BaseModel):
     avoid_urban: float = Field(0.0, ge=0.0, le=1.0)
     ignore_urban_curves: bool = False
     min_curve_speed: int = Field(0, ge=0, le=200)  # km/h threshold; 0 = off
+    avoid_unpaved: bool = True
 
 
 class RouteRequest(BaseModel):
@@ -73,7 +74,8 @@ async def plan_route(req: RouteRequest):
             avoid_trunks=req.options.avoid_trunks,
             avoid_urban=req.options.avoid_urban,
             ignore_urban_curves=req.options.ignore_urban_curves,
-            min_curve_speed=req.options.min_curve_speed
+            min_curve_speed=req.options.min_curve_speed,
+            avoid_unpaved=req.options.avoid_unpaved
         )
     except RoutingRequestError as e:
         raise HTTPException(

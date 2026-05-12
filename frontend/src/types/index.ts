@@ -20,6 +20,7 @@ export interface RouteOptions {
   avoidUrban: number            // 0..1
   ignoreUrbanCurves: boolean    // score-only filter
   minCurveSpeed: number         // km/h threshold; 0 = off
+  avoidUnpaved: boolean
 }
 
 export const MIN_CURVE_SPEED_STEPS = [0, 30, 50, 70, 80, 90, 100, 120] as const
@@ -33,7 +34,8 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     avoidTrunks: 0,
     avoidUrban: 0,
     ignoreUrbanCurves: false,
-    minCurveSpeed: 0
+    minCurveSpeed: 0,
+    avoidUnpaved: true
   },
   curvy: {
     curviness: 0.7,
@@ -41,7 +43,8 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     avoidTrunks: 0.4,
     avoidUrban: 0.3,
     ignoreUrbanCurves: true,
-    minCurveSpeed: 0
+    minCurveSpeed: 0,
+    avoidUnpaved: true
   },
   curvyPlus: {
     curviness: 1.2,
@@ -49,7 +52,8 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     avoidTrunks: 0.8,
     avoidUrban: 0.6,
     ignoreUrbanCurves: true,
-    minCurveSpeed: 50
+    minCurveSpeed: 50,
+    avoidUnpaved: true
   },
   curvyMax: {
     curviness: 2.0,
@@ -57,7 +61,8 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     avoidTrunks: 1.0,
     avoidUrban: 0.9,
     ignoreUrbanCurves: true,
-    minCurveSpeed: 70
+    minCurveSpeed: 70,
+    avoidUnpaved: true
   }
 }
 
@@ -74,7 +79,8 @@ export function matchPreset(opts: RouteOptions): PresetId | null {
       p.avoidTrunks === opts.avoidTrunks &&
       p.avoidUrban === opts.avoidUrban &&
       p.ignoreUrbanCurves === opts.ignoreUrbanCurves &&
-      p.minCurveSpeed === opts.minCurveSpeed
+      p.minCurveSpeed === opts.minCurveSpeed &&
+      p.avoidUnpaved === opts.avoidUnpaved
     ) return id
   }
   return null

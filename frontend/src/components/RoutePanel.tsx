@@ -217,6 +217,7 @@ export function RoutePanel({
               markerAt={1}
               warningOverMarker={t('options.curvinessExtremeWarn')}
               onChange={(v) => onOptionChange('curviness', v)}
+              intense
             />
             <Slider
               label={t('options.avoidMotorways')}
@@ -242,6 +243,16 @@ export function RoutePanel({
               />
               <span className={styles.toggleLabel}>{t('options.ignoreUrbanCurves')}</span>
               <InfoIcon text={t('options.ignoreUrbanCurvesHint')} />
+            </label>
+
+            <label className={styles.toggle}>
+              <input
+                type="checkbox"
+                checked={options.avoidUnpaved}
+                onChange={(e) => onOptionChange('avoidUnpaved', e.target.checked)}
+              />
+              <span className={styles.toggleLabel}>{t('options.avoidUnpaved')}</span>
+              <InfoIcon text={t('options.avoidUnpavedHint')} />
             </label>
 
             <StepSlider

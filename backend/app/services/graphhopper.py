@@ -20,11 +20,21 @@ def build_custom_model(
     avoid_trunks: float,
     avoid_urban: float,
     ignore_urban_curves: bool,
-    min_curve_speed: int
+    min_curve_speed: int,
+    avoid_unpaved: bool
 ) -> dict[str, Any]:
     """Translate slider values (0.0–1.0) into a GraphHopper custom-model JSON."""
     priority: list[dict[str, Any]] = []
     distance_influence = 70
+
+    # Avoid unpaved/loose surfaces — motorcycles and tarmac, basically.
+    # GraphHopper's surface enum: UNPAVED, GRAVEL, GROUND, DIRT, GRASS, SAND,
+    # COMPACTED, FINE_GRAVEL, COBBLESTONE. ASPHALT/CONCRETE/PAVING_STONES/PAVED
+    # pass through unaffected.
+    if avoid_unpaved:
+        for s in ("UNPAVED", "GRAVEL", "GROUND", "DIRT", "GRASS", "SAND",
+                  "COMPACTED", "FINE_GRAVEL", "COBBLESTONE"):
+            priority.append({"if": f"surface == {s}", "multiply_by": 0.05})
 
     if avoid_motorways > 0:
         mult = max(0.02, 1.0 - avoid_motorways * 0.98)
@@ -86,10 +96,11 @@ def build_custom_model(
 
 
 def _is_default(curviness, avoid_motorways, avoid_trunks, avoid_urban,
-                ignore_urban_curves, min_curve_speed) -> bool:
+                ignore_urban_curves, min_curve_speed, avoid_unpaved) -> bool:
     return (
         curviness == 0 and avoid_motorways == 0 and avoid_trunks == 0
         and avoid_urban == 0 and not ignore_urban_curves and min_curve_speed == 0
+        and not avoid_unpaved
     )
 
 
@@ -100,11 +111,12 @@ async def route(
     avoid_trunks: float,
     avoid_urban: float,
     ignore_urban_curves: bool,
-    min_curve_speed: int
+    min_curve_speed: int,
+    avoid_unpaved: bool
 ) -> dict[str, Any]:
     use_defaults = _is_default(
         curviness, avoid_motorways, avoid_trunks, avoid_urban,
-        ignore_urban_curves, min_curve_speed
+        ignore_urban_curves, min_curve_speed, avoid_unpaved
     )
 
     payload: dict[str, Any] = {
@@ -124,7 +136,7 @@ async def route(
         payload["ch.disable"] = True
         payload["custom_model"] = build_custom_model(
             curviness, avoid_motorways, avoid_trunks, avoid_urban,
-            ignore_urban_curves, min_curve_speed
+            ignore_urban_curves, min_curve_speed, avoid_unpaved
         )
 
     async with httpx.AsyncClient(timeout=60) as client:

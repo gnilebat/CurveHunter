@@ -113,3 +113,79 @@
   border-radius: 5px;
   line-height: 1.4;
 }
+
+/* — Intense (curviness) — fun gradient fill + hot-mode glow past the marker — */
+
+.intense .range {
+  /* Rainbow fill scales to --pct of the track; rest is the regular border colour. */
+  background:
+    linear-gradient(
+      90deg,
+      #16a34a 0%,
+      #84cc16 18%,
+      #eab308 35%,
+      #f97316 50%,
+      #dc2626 65%,
+      #db2777 82%,
+      #7c3aed 100%
+    ) 0 0 / var(--pct, 0%) 100% no-repeat,
+    var(--border);
+  transition: background-size 0.15s;
+}
+
+.intense .value {
+  /* Hue shifts with intensity: orange → red → magenta as you push past 100%. */
+  color: hsl(
+    calc(28deg - var(--intensity, 0) * 70deg),
+    90%,
+    50%
+  );
+  transition: color 0.2s, transform 0.2s;
+  transform: scale(calc(1 + var(--intensity, 0) * 0.18));
+  transform-origin: right center;
+}
+
+.intense.hot .range::-webkit-slider-thumb {
+  border-color: #dc2626;
+  animation: thumbPulse 1.4s ease-in-out infinite;
+}
+
+.intense.hot .range::-moz-range-thumb {
+  border-color: #dc2626;
+  animation: thumbPulse 1.4s ease-in-out infinite;
+}
+
+.intense.hot .value {
+  animation: valueFlare 1.8s ease-in-out infinite;
+}
+
+.intense.hot .warning {
+  background: linear-gradient(90deg, #fff1f2, #fef2f2);
+  border-color: #fecaca;
+  color: #b91c1c;
+  animation: warningGlow 2s ease-in-out infinite;
+}
+
+@keyframes thumbPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55), 0 2px 6px rgba(0,0,0,0.18); }
+  50%      { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0.0),  0 2px 10px rgba(220, 38, 38, 0.45); }
+}
+
+@keyframes valueFlare {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50%      { text-shadow: 0 0 10px rgba(220, 38, 38, 0.6); }
+}
+
+@keyframes warningGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  50%      { box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.25), 0 0 12px rgba(220, 38, 38, 0.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intense.hot .range::-webkit-slider-thumb,
+  .intense.hot .range::-moz-range-thumb,
+  .intense.hot .value,
+  .intense.hot .warning {
+    animation: none;
+  }
+}
