@@ -183,6 +183,19 @@ export function RoutePanel({
         >⇅</button>
       </div>
 
+      <div className={styles.presetRow} role="group">
+        {PRESET_ORDER.map((id) => (
+          <button
+            key={id}
+            className={`${styles.presetBtn} ${activePreset === id ? styles.presetActive : ''}`}
+            onClick={() => onOptionsApply(ROUTE_PRESETS[id])}
+            aria-pressed={activePreset === id}
+          >
+            {t(PRESET_LABEL_KEY[id])}
+          </button>
+        ))}
+      </div>
+
       <section className={styles.options}>
         <button
           className={styles.optionsHead}
@@ -196,19 +209,6 @@ export function RoutePanel({
 
         {optionsOpen && (
           <div className={styles.optionsBody}>
-            <div className={styles.presetRow} role="group">
-              {PRESET_ORDER.map((id) => (
-                <button
-                  key={id}
-                  className={`${styles.presetBtn} ${activePreset === id ? styles.presetActive : ''}`}
-                  onClick={() => onOptionsApply(ROUTE_PRESETS[id])}
-                  aria-pressed={activePreset === id}
-                >
-                  {t(PRESET_LABEL_KEY[id])}
-                </button>
-              ))}
-            </div>
-
             <Slider
               label={t('options.curviness')}
               hint={t('options.curvinessHint')}
