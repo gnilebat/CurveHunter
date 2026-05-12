@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-CurveHunter is a motorcycle route planning web app. The core differentiator is a curviness scoring algorithm that rates roads by angular deviation per kilometer, allowing riders to find and generate curvy, fun routes. See IMPLEMENTATION_PLAN.md for full details.
+Schräglage (formerly "CurveHunter") is a motorcycle route planning web app. The core differentiator is a curviness scoring algorithm that rates roads by angular deviation per kilometer, allowing riders to find and generate curvy, fun routes. See IMPLEMENTATION_PLAN.md for full details. Note that the on-disk repo folder is still `CurveHunter/` — only the user-facing brand changed.
 
 ## Stack (fully self-hosted, no third-party APIs)
 

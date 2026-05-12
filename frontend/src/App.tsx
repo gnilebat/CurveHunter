@@ -119,7 +119,7 @@ export default function App() {
     const wps = waypoints.filter((w): w is Waypoint => w !== null)
     const name = wps.length >= 2
       ? `${wps[0].name} → ${wps[wps.length - 1].name}`
-      : 'CurveHunter route'
+      : 'Schräglage route'
     const gpx = routeToGpx(route, wps, name)
     downloadGpx(defaultGpxFilename(), gpx)
   }, [route, waypoints])

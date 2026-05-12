@@ -9,7 +9,7 @@
 export const strings = {
   de: {
     panel: {
-      brand: 'CurveHunter',
+      brand: 'Schräglage',
       modeDirect: 'A → B',
       modeRoundTrip: 'Rundkurs',
       roundTripDistance: 'Distanz',
@@ -180,7 +180,7 @@ export const strings = {
 
   en: {
     panel: {
-      brand: 'CurveHunter',
+      brand: 'Schräglage',
       modeDirect: 'A → B',
       modeRoundTrip: 'Loop',
       roundTripDistance: 'Distance',

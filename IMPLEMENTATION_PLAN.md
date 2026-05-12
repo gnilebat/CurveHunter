@@ -1,4 +1,4 @@
-# CurveHunter — Implementation Plan
+# Schräglage — Implementation Plan
 
 ## Guiding Principle
 

@@ -24,7 +24,7 @@ export function routeToGpx(route: RouteResult, waypoints: Waypoint[], name: stri
   }).join('\n')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="CurveHunter" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Schräglage" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(name)}</name>
     <time>${time}</time>
@@ -55,5 +55,5 @@ export function downloadGpx(filename: string, gpxText: string): void {
 export function defaultGpxFilename(): string {
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `CurveHunter-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.gpx`
+  return `Schraeglage-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.gpx`
 }
