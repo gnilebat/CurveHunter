@@ -76,6 +76,27 @@ def build_urban_mask(
     return is_urban
 
 
+def build_speed_below_mask(
+    n_coords: int,
+    max_speed_ranges: list,
+    min_speed: int
+) -> list[bool]:
+    """
+    True = edge has a tagged max_speed strictly below `min_speed`.
+    Untagged edges (speed == 0) are NOT marked — they fall through as
+    counted, since most rural roads in OSM Germany lack max_speed tags.
+    """
+    below = [False] * n_coords
+    if min_speed <= 0:
+        return below
+    for entry in max_speed_ranges:
+        from_idx, to_idx, speed = entry[0], entry[1], entry[2]
+        if isinstance(speed, (int, float)) and 0 < speed < min_speed:
+            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
+                below[i] = True
+    return below
+
+
 def build_highway_mask(n_coords: int, road_class_ranges: list) -> list[bool]:
     """GraphHopper details → per-coordinate mask for Autobahnen + Kraftfahrstraßen."""
     is_highway = [False] * n_coords

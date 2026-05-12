@@ -48,7 +48,8 @@ export async function fetchRoute(
         avoid_motorways: opts.avoidMotorways,
         avoid_trunks: opts.avoidTrunks,
         avoid_urban: opts.avoidUrban,
-        ignore_urban_curves: opts.ignoreUrbanCurves
+        ignore_urban_curves: opts.ignoreUrbanCurves,
+        min_curve_speed: opts.minCurveSpeed
       }
     })
   })

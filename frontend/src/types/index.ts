@@ -13,19 +13,23 @@ export interface RouteSegment {
 }
 
 export interface RouteOptions {
-  curviness: number          // 0..1
-  avoidMotorways: number     // 0..1
-  avoidTrunks: number        // 0..1
-  avoidUrban: number         // 0..1
-  ignoreUrbanCurves: boolean // score-only flag; doesn't change routing
+  curviness: number             // 0..1
+  avoidMotorways: number        // 0..1
+  avoidTrunks: number           // 0..1
+  avoidUrban: number            // 0..1
+  ignoreUrbanCurves: boolean    // score-only filter
+  minCurveSpeed: number         // km/h threshold; 0 = off
 }
+
+export const MIN_CURVE_SPEED_STEPS = [0, 30, 50, 70, 80, 90, 100, 120] as const
 
 export const DEFAULT_ROUTE_OPTIONS: RouteOptions = {
   curviness: 0.7,
   avoidMotorways: 0.8,
   avoidTrunks: 0.4,
   avoidUrban: 0.0,
-  ignoreUrbanCurves: false
+  ignoreUrbanCurves: false,
+  minCurveSpeed: 0
 }
 
 export interface Instruction {

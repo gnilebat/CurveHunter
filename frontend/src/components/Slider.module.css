@@ -76,3 +76,32 @@
   color: #9ca3af;
   line-height: 1.4;
 }
+
+.trackWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.marker {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 14px;
+  background: #6b7280;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.warning {
+  margin: 0;
+  font-size: 11px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 6px 8px;
+  border-radius: 5px;
+  line-height: 1.4;
+}

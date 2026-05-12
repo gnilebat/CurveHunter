@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.services import graphhopper
-from app.services.curvature import overall_curvature, segment_curvature, build_urban_mask, build_highway_mask
+from app.services.curvature import (
+    overall_curvature, segment_curvature,
+    build_urban_mask, build_highway_mask, build_speed_below_mask
+)
 
 router = APIRouter()
 
@@ -13,11 +16,12 @@ class WaypointIn(BaseModel):
 
 
 class RouteOptions(BaseModel):
-    curviness: float = Field(0.7, ge=0.0, le=1.0)
+    curviness: float = Field(0.7, ge=0.0, le=2.0)
     avoid_motorways: float = Field(0.8, ge=0.0, le=1.0)
     avoid_trunks: float = Field(0.4, ge=0.0, le=1.0)
     avoid_urban: float = Field(0.0, ge=0.0, le=1.0)
     ignore_urban_curves: bool = False
+    min_curve_speed: int = Field(0, ge=0, le=200)  # km/h threshold; 0 = off
 
 
 class RouteRequest(BaseModel):
@@ -64,7 +68,8 @@ async def plan_route(req: RouteRequest):
             curviness=req.options.curviness,
             avoid_motorways=req.options.avoid_motorways,
             avoid_trunks=req.options.avoid_trunks,
-            avoid_urban=req.options.avoid_urban
+            avoid_urban=req.options.avoid_urban,
+            ignore_urban_curves=req.options.ignore_urban_curves
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
@@ -78,20 +83,33 @@ async def plan_route(req: RouteRequest):
 
     # Per-coordinate urban mask from GraphHopper details
     details = path.get("details", {})
+    n = len(coords_2d)
     urban_mask = build_urban_mask(
-        n_coords=len(coords_2d),
+        n_coords=n,
         road_class_ranges=details.get("road_class", []),
         max_speed_ranges=details.get("max_speed", [])
     )
     highway_mask = build_highway_mask(
-        n_coords=len(coords_2d),
+        n_coords=n,
         road_class_ranges=details.get("road_class", [])
     )
-
-    score, _ = overall_curvature(
-        coords_2d,
-        skip_mask=urban_mask if req.options.ignore_urban_curves else None
+    speed_below_mask = build_speed_below_mask(
+        n_coords=n,
+        max_speed_ranges=details.get("max_speed", []),
+        min_speed=req.options.min_curve_speed
     )
+
+    # Combine score-filter masks: skip a vertex if EITHER filter applies
+    use_urban_filter = req.options.ignore_urban_curves
+    use_speed_filter = req.options.min_curve_speed > 0
+    skip_mask = None
+    if use_urban_filter or use_speed_filter:
+        skip_mask = [
+            (use_urban_filter and urban_mask[i]) or (use_speed_filter and speed_below_mask[i])
+            for i in range(n)
+        ]
+
+    score, _ = overall_curvature(coords_2d, skip_mask=skip_mask)
     segments = segment_curvature(
         coords_2d,
         window_m=500.0,

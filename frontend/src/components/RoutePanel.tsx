@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
-import { DEFAULT_ROUTE_OPTIONS } from '../types'
+import { DEFAULT_ROUTE_OPTIONS, MIN_CURVE_SPEED_STEPS } from '../types'
 import { SearchInput } from './SearchInput'
 import { Slider } from './Slider'
+import { StepSlider } from './StepSlider'
 import { useLocale } from '../i18n/LocaleProvider'
 import { LOCALES } from '../i18n/strings'
 import styles from './RoutePanel.module.css'
@@ -81,7 +82,8 @@ export function RoutePanel({
     options.avoidMotorways === DEFAULT_ROUTE_OPTIONS.avoidMotorways &&
     options.avoidTrunks === DEFAULT_ROUTE_OPTIONS.avoidTrunks &&
     options.avoidUrban === DEFAULT_ROUTE_OPTIONS.avoidUrban &&
-    options.ignoreUrbanCurves === DEFAULT_ROUTE_OPTIONS.ignoreUrbanCurves
+    options.ignoreUrbanCurves === DEFAULT_ROUTE_OPTIONS.ignoreUrbanCurves &&
+    options.minCurveSpeed === DEFAULT_ROUTE_OPTIONS.minCurveSpeed
 
   return (
     <aside className={styles.panel}>
@@ -149,6 +151,9 @@ export function RoutePanel({
               label={t('options.curviness')}
               hint={t('options.curvinessHint')}
               value={options.curviness}
+              max={2}
+              markerAt={1}
+              warningOverMarker={t('options.curvinessExtremeWarn')}
               onChange={(v) => onOptionChange('curviness', v)}
             />
             <Slider
@@ -178,6 +183,15 @@ export function RoutePanel({
                 <span className={styles.toggleHint}>{t('options.ignoreUrbanCurvesHint')}</span>
               </div>
             </label>
+
+            <StepSlider
+              label={t('options.minCurveSpeed')}
+              hint={t('options.minCurveSpeedHint')}
+              value={options.minCurveSpeed}
+              steps={[...MIN_CURVE_SPEED_STEPS]}
+              formatValue={(v) => v === 0 ? t('options.minCurveSpeedOff') : `≥ ${v} km/h`}
+              onChange={(v) => onOptionChange('minCurveSpeed', v)}
+            />
 
             {!optsAreDefault && (
               <button className={styles.resetBtn} onClick={onOptionsReset}>

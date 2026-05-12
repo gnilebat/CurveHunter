@@ -3,30 +3,53 @@ import styles from './Slider.module.css'
 interface Props {
   label: string
   hint?: string
-  value: number       // 0..1
+  value: number       // 0..max
   onChange: (v: number) => void
-  step?: number       // 0..1 fraction
+  step?: number
+  max?: number        // default 1
+  /** Optional marker on the track where the slider crosses into "extended" territory (e.g. 1.0 on a 0..2 slider). */
+  markerAt?: number
+  /** Optional warning shown only when value > markerAt. */
+  warningOverMarker?: string
 }
 
-export function Slider({ label, hint, value, onChange, step = 0.05 }: Props) {
+export function Slider({
+  label, hint, value, onChange,
+  step = 0.05, max = 1, markerAt, warningOverMarker
+}: Props) {
   const pct = Math.round(value * 100)
+  const fillPct = Math.round((value / max) * 100)
+  const markerPct = markerAt !== undefined ? Math.round((markerAt / max) * 100) : null
+  const showWarning =
+    markerAt !== undefined && warningOverMarker && value > markerAt
+
   return (
     <div className={styles.wrap}>
       <div className={styles.head}>
         <span className={styles.label}>{label}</span>
         <span className={styles.value}>{pct}%</span>
       </div>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className={styles.range}
-        style={{ '--pct': `${pct}%` } as React.CSSProperties}
-      />
-      {hint && <p className={styles.hint}>{hint}</p>}
+      <div className={styles.trackWrap}>
+        <input
+          type="range"
+          min={0}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={styles.range}
+          style={{ '--pct': `${fillPct}%` } as React.CSSProperties}
+        />
+        {markerPct !== null && (
+          <span
+            className={styles.marker}
+            style={{ left: `${markerPct}%` }}
+            aria-hidden
+          />
+        )}
+      </div>
+      {hint && !showWarning && <p className={styles.hint}>{hint}</p>}
+      {showWarning && <p className={styles.warning}>⚠ {warningOverMarker}</p>}
     </div>
   )
 }
