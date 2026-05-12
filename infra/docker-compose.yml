@@ -24,7 +24,8 @@ services:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       GRAPHHOPPER_URL: http://graphhopper:8989
-      NOMINATIM_URL: http://nominatim:8080
+      GEOCODER_URL: http://photon:2322
+      GEOCODER_LANG: de
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       postgres:
@@ -41,6 +42,7 @@ services:
     volumes:
       - ./data/osm:/data                   # place map.osm.pbf here
       - graphhopper-cache:/data/graph-cache
+      - elevation-cache:/data/elevation-cache
       - ../routing/config.yml:/graphhopper/config.yml:ro
       - ../routing/motorcycle_curvy.json:/graphhopper/motorcycle_curvy.json:ro
     environment:
@@ -52,18 +54,23 @@ services:
       retries: 5
       start_period: 180s
 
-  # ── Nominatim geocoder ───────────────────────────────────────────────────────
-  nominatim:
-    image: mediagis/nominatim:4.4
+  # ── Photon geocoder (autocomplete) ───────────────────────────────────────────
+  # Uses komoot/photon's pre-built index (downloaded by an external script into
+  # D:\Docker\photon_data). No import step at container start — Photon just
+  # opens the ES index. Container is small and starts in <60s once the index
+  # is on disk. Bring up manually with `docker compose up -d photon`.
+  photon:
+    image: rtuszik/photon-docker:latest
     restart: unless-stopped
-    environment:
-      PBF_PATH: /nominatim/data/map.osm.pbf
-      REPLICATION_URL: ""
-      NOMINATIM_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./data/osm:/nominatim/data
-      - nominatim-data:/var/lib/postgresql/14/main
-    shm_size: 1g
+      - photon-data:/photon/photon_data
+    profiles: ["geocoder"]   # don't start with the default `docker compose up`
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2322/api?q=ping >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 90s
 
   # ── PostgreSQL + PostGIS ─────────────────────────────────────────────────────
   postgres:
@@ -84,11 +91,13 @@ services:
 volumes:
   postgres-data:
   graphhopper-cache:
-  # Nominatim's ~50 GB DB lives on D: so it doesn't fill the Docker Desktop
-  # data drive. WSL2 9p adds some overhead — acceptable for this one-off import.
-  nominatim-data:
+  elevation-cache:
+  # Photon's ~12 GB Elasticsearch index lives at D:\Docker\photon_data — it's
+  # extracted from the pre-built tarball downloaded from graphhopper.com.
+  # The path inside the bind target must contain a `node_1/` subdirectory.
+  photon-data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: D:/Docker/nominatim-data
+      device: D:/Docker/photon_data

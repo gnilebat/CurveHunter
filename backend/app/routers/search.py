@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
-from app.services import nominatim
+from app.services import geocoder
 
 router = APIRouter()
 
@@ -15,7 +15,7 @@ class SearchResult(BaseModel):
 @router.get("/search", response_model=list[SearchResult])
 async def search_places(q: str = Query(..., min_length=2)):
     try:
-        results = await nominatim.search(q)
+        results = await geocoder.search(q)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Geocoding error: {e}")
 

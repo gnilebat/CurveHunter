@@ -2,7 +2,13 @@ graphhopper:
   datareader.file: /data/map.osm.pbf
   graph.location: /data/graph-cache
 
-  graph.encoded_values: car_access, car_average_speed, road_class, surface, road_environment, max_speed
+  graph.encoded_values: car_access, car_average_speed, road_class, surface, road_environment, max_speed, average_slope, max_slope
+
+  # Elevation provider — SRTM tiles cached on disk. Required for the
+  # frontend's elevation profile chart and any slope-aware routing.
+  graph.elevation.provider: srtm
+  graph.elevation.cache_dir: /data/elevation-cache
+  graph.elevation.dataaccess: MMAP
 
   profiles:
     - name: motorcycle
