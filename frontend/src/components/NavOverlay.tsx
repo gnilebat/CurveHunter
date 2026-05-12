@@ -14,6 +14,9 @@ interface Props {
   arrived: boolean
   onStop: () => void
   onRecalculate: () => void
+  voiceEnabled: boolean
+  voiceAvailable: boolean
+  onToggleVoice: () => void
 }
 
 // GraphHopper sign → translation key under `nav.verb`
@@ -41,7 +44,8 @@ function streetFromInstruction(ins: Instruction): string | null {
 export function NavOverlay({
   currentInstruction, nextInstruction,
   distanceToNextTurnM, distanceRemainingM, durationRemainingS, speedMs,
-  offRoute, arrived, onStop, onRecalculate
+  offRoute, arrived, onStop, onRecalculate,
+  voiceEnabled, voiceAvailable, onToggleVoice
 }: Props) {
   const { t, locale } = useLocale()
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
@@ -73,6 +77,28 @@ export function NavOverlay({
     return arrival.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })
   }
 
+  const voiceButton = voiceAvailable ? (
+    <button
+      className={styles.closeBtn}
+      onClick={onToggleVoice}
+      aria-label={voiceEnabled ? t('nav.voiceOff') : t('nav.voiceOn')}
+      title={voiceEnabled ? t('nav.voiceOff') : t('nav.voiceOn')}
+      aria-pressed={voiceEnabled}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+        {voiceEnabled ? (
+          <>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </>
+        ) : (
+          <line x1="22" y1="2" x2="14" y2="22" />
+        )}
+      </svg>
+    </button>
+  ) : null
+
   if (arrived) {
     return (
       <div className={styles.wrap}>
@@ -90,6 +116,7 @@ export function NavOverlay({
             <span className={styles.etaTime}>—</span>
             <span className={styles.etaSub}>{t('nav.endOfRoute')}</span>
           </div>
+          {voiceButton}
           <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
         </div>
       </div>
@@ -159,6 +186,7 @@ export function NavOverlay({
             {' · '}{t('nav.etaLabel')} {formatETA(durationRemainingS)}
           </span>
         </div>
+        {voiceButton}
         <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
       </div>
     </div>

@@ -3,9 +3,23 @@ import { Map } from './components/Map'
 import { RoutePanel } from './components/RoutePanel'
 import { NavOverlay } from './components/NavOverlay'
 import { useRoute } from './hooks/useRoute'
-import { useNavigation } from './hooks/useNavigation'
+import { useNavigation, type NavCue } from './hooks/useNavigation'
+import { useTTS } from './tts/useTTS'
+import { useLocale } from './i18n/LocaleProvider'
+import { verbKey } from './lib/maneuver'
 import type { Waypoint } from './types'
 import './App.css'
+
+function roundDistance(m: number): { value: number; unit: 'm' | 'km' } {
+  if (m >= 1000) {
+    return { value: Math.round(m / 100) / 10, unit: 'km' }
+  }
+  // Snap to nice spoken numbers: 30, 50, 100, 200, 300, 500
+  const snaps = [30, 50, 100, 200, 300, 500]
+  let best = snaps[0]
+  for (const s of snaps) if (Math.abs(s - m) < Math.abs(best - m)) best = s
+  return { value: best, unit: 'm' }
+}
 
 export default function App() {
   const {
@@ -14,7 +28,39 @@ export default function App() {
     setOption, setOptions, swap, clearAll, retry
   } = useRoute()
 
-  const nav = useNavigation(route)
+  const tts = useTTS()
+  const { locale, t } = useLocale()
+  const speechLang = locale === 'de' ? 'de-DE' : 'en-US'
+
+  const composeCue = useCallback((cue: NavCue): string | null => {
+    if (cue.kind === 'arrive') return t('nav.cue.arrive')
+    if (cue.kind === 'offRoute') return t('nav.cue.offRoute')
+    if (cue.sign === undefined) return null
+
+    const verbRaw = t(`nav.verb.${verbKey(cue.sign)}`)
+    // Verbs in the catalogue are sentence-capitalised; lower-case them when
+    // inlining into "In 200 m turn right onto X" / "In 200 m rechts abbiegen".
+    const verb = verbRaw.charAt(0).toLowerCase() + verbRaw.slice(1)
+    const onto = cue.streetName
+      ? t('nav.cue.ontoStreet', { street: cue.streetName })
+      : ''
+
+    if (cue.kind === 'near') {
+      return t('nav.cue.nowVerb', { verb, onto })
+    }
+    const d = roundDistance(cue.distanceM ?? 0)
+    const distance = `${d.value} ${d.unit === 'km' ? t('nav.unitKm') : t('nav.unitM')}`
+    return t('nav.cue.inDistance', { distance, verb, onto })
+  }, [t])
+
+  const handleCue = useCallback((cue: NavCue) => {
+    const text = composeCue(cue)
+    if (!text) return
+    tts.cancel()  // replace any pending speech with the freshest cue
+    tts.speak(text, speechLang)
+  }, [composeCue, tts, speechLang])
+
+  const nav = useNavigation(route, handleCue)
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (nav.active) return
@@ -78,6 +124,9 @@ export default function App() {
             arrived={nav.arrived}
             onStop={nav.stop}
             onRecalculate={handleRecalcFromUser}
+            voiceEnabled={tts.enabled}
+            voiceAvailable={tts.available}
+            onToggleVoice={() => tts.setEnabled(!tts.enabled)}
           />
         )}
       </div>

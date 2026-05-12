@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RouteResult, Instruction } from '../types'
 
+export type NavCueKind = 'far' | 'mid' | 'near' | 'arrive' | 'offRoute'
+
+export interface NavCue {
+  kind: NavCueKind
+  sign?: number
+  streetName?: string | null
+  distanceM?: number
+}
+
 export interface UserPosition {
   lat: number
   lng: number
@@ -46,10 +55,14 @@ function closestVertex(coords: number[][], pt: [number, number]) {
 const OFF_ROUTE_THRESHOLD_M = 60   // beyond this distance from the route line
 const ARRIVAL_THRESHOLD_M = 30      // within this distance of the destination = arrived
 
-export function useNavigation(route: RouteResult | null) {
+export function useNavigation(route: RouteResult | null, onCue?: (cue: NavCue) => void) {
   const [active, setActive] = useState(false)
   const [userPos, setUserPos] = useState<UserPosition | null>(null)
   const watchId = useRef<number | null>(null)
+  const announcedRef = useRef<Set<string>>(new Set())
+  // Keep a ref so the effect doesn't re-fire when the caller changes the callback identity.
+  const onCueRef = useRef(onCue)
+  useEffect(() => { onCueRef.current = onCue }, [onCue])
 
   const start = useCallback(() => {
     if (!route || !navigator.geolocation) return
@@ -161,6 +174,48 @@ export function useNavigation(route: RouteResult | null) {
     userPos !== null &&
     route !== null &&
     state.distanceRemainingM < ARRIVAL_THRESHOLD_M
+
+  // Reset announcement memory whenever the route changes.
+  useEffect(() => { announcedRef.current.clear() }, [route])
+
+  // Emit cues at distance bands per upcoming turn, plus arrival / off-route.
+  const upcoming = state.nextInstruction
+  const upcomingKey = upcoming ? `i${upcoming.interval[0]}-${upcoming.interval[1]}` : null
+  useEffect(() => {
+    const fire = onCueRef.current
+    if (!fire || !state.active) return
+    const seen = announcedRef.current
+
+    if (arrived) {
+      if (!seen.has('arrive')) { seen.add('arrive'); fire({ kind: 'arrive' }) }
+      return
+    }
+
+    if (state.offRoute) {
+      if (!seen.has('offRoute')) { seen.add('offRoute'); fire({ kind: 'offRoute' }) }
+      return
+    } else {
+      seen.delete('offRoute')
+    }
+
+    if (!upcoming || !upcomingKey) return
+    const d = state.distanceToNextTurnM
+    let band: 'far' | 'mid' | 'near' | null = null
+    if (d <= 50) band = 'near'
+    else if (d <= 200) band = 'mid'
+    else if (d <= 500) band = 'far'
+    if (!band) return
+
+    const key = `${upcomingKey}-${band}`
+    if (seen.has(key)) return
+    seen.add(key)
+    fire({
+      kind: band,
+      sign: upcoming.sign,
+      streetName: upcoming.streetName,
+      distanceM: d
+    })
+  }, [state.active, state.offRoute, state.distanceToNextTurnM, upcomingKey, arrived, upcoming])
 
   return { ...state, arrived, start, stop }
 }

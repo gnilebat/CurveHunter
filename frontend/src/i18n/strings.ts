@@ -95,6 +95,17 @@ export const strings = {
       hourShort: 'Std',
       minShort: 'Min',
       onto: 'auf',
+      voiceOn: 'Sprachausgabe einschalten',
+      voiceOff: 'Sprachausgabe ausschalten',
+      cue: {
+        inDistance: 'In {distance} {verb}{onto}',
+        nowVerb: 'Jetzt {verb}{onto}',
+        ontoStreet: ' auf {street}',
+        arrive: 'Ziel erreicht',
+        offRoute: 'Du bist nicht auf der Route'
+      },
+      unitM: 'Meter',
+      unitKm: 'Kilometer',
       verb: {
         continue: 'Weiter geradeaus',
         slightRight: 'Leicht rechts',
@@ -201,6 +212,17 @@ export const strings = {
       hourShort: 'h',
       minShort: 'min',
       onto: 'onto',
+      voiceOn: 'Turn voice on',
+      voiceOff: 'Turn voice off',
+      cue: {
+        inDistance: 'In {distance} {verb}{onto}',
+        nowVerb: '{verb} now{onto}',
+        ontoStreet: ' onto {street}',
+        arrive: "You've arrived",
+        offRoute: "You're off the route"
+      },
+      unitM: 'metres',
+      unitKm: 'kilometres',
       verb: {
         continue: 'Continue',
         slightRight: 'Slight right',
