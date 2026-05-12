@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import type { Instruction } from '../types'
 import { ManeuverIcon } from './ManeuverIcon'
 import { useLocale } from '../i18n/LocaleProvider'
 import styles from './NavOverlay.module.css'
+
+const BG_WARN_KEY = 'curvehunter.voice.bgWarnDismissed'
 
 interface Props {
   currentInstruction: Instruction | null
@@ -49,6 +52,40 @@ export function NavOverlay({
 }: Props) {
   const { t, locale } = useLocale()
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
+
+  const [bgWarnDismissed, setBgWarnDismissed] = useState<boolean>(() => {
+    try { return localStorage.getItem(BG_WARN_KEY) === 'true' } catch { return false }
+  })
+  const [bgWarnHiddenSession, setBgWarnHiddenSession] = useState(false)
+  const dismissBgWarnSession = () => setBgWarnHiddenSession(true)
+  const dismissBgWarnForever = () => {
+    setBgWarnDismissed(true)
+    setBgWarnHiddenSession(true)
+    try { localStorage.setItem(BG_WARN_KEY, 'true') } catch { /* ignore */ }
+  }
+  const showBgWarn =
+    voiceEnabled && voiceAvailable && !bgWarnDismissed && !bgWarnHiddenSession && !arrived
+
+  const bgWarn = showBgWarn ? (
+    <div className={styles.bgWarn} role="status">
+      <span className={styles.bgWarnIcon} aria-hidden>⚠</span>
+      <div className={styles.bgWarnText}>
+        <strong>{t('nav.bgWarn.title')}</strong>
+        <span>{t('nav.bgWarn.body')}</span>
+      </div>
+      <div className={styles.bgWarnActions}>
+        <button className={styles.bgWarnBtn} onClick={dismissBgWarnSession}>
+          {t('nav.bgWarn.dismiss')}
+        </button>
+        <button
+          className={`${styles.bgWarnBtn} ${styles.bgWarnBtnSubtle}`}
+          onClick={dismissBgWarnForever}
+        >
+          {t('nav.bgWarn.dismissForever')}
+        </button>
+      </div>
+    </div>
+  ) : null
 
   function formatNavDistance(m: number) {
     if (m < 50) return t('nav.now')
@@ -163,6 +200,8 @@ export function NavOverlay({
           </div>
         )}
       </div>
+
+      {bgWarn}
 
       {offRoute && (
         <div className={styles.offRoute}>

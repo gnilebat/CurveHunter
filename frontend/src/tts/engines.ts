@@ -14,6 +14,18 @@ export interface TTSEngine {
 class WebSpeechTTS implements TTSEngine {
   readonly id: TTSEngineId = 'web'
 
+  constructor() {
+    // Android Chrome (and Safari) populate the voices list asynchronously.
+    // Warm it up so the first cue can pick the right voice instead of falling
+    // back to the system default.
+    if (this.isAvailable()) {
+      window.speechSynthesis.getVoices()
+      window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+        window.speechSynthesis.getVoices()
+      })
+    }
+  }
+
   isAvailable(): boolean {
     return typeof window !== 'undefined' && 'speechSynthesis' in window
   }
@@ -21,10 +33,13 @@ class WebSpeechTTS implements TTSEngine {
   private pickVoice(lang: string): SpeechSynthesisVoice | null {
     const voices = window.speechSynthesis.getVoices()
     if (voices.length === 0) return null
-    const exact = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase())
-    if (exact) return exact
-    const prefix = lang.split('-')[0].toLowerCase()
-    return voices.find(v => v.lang.toLowerCase().startsWith(prefix)) ?? null
+    const norm = lang.toLowerCase()
+    const prefix = norm.split('-')[0]
+    return (
+      voices.find(v => v.lang.toLowerCase() === norm) ??
+      voices.find(v => v.lang.toLowerCase().startsWith(prefix)) ??
+      null
+    )
   }
 
   speak(text: string, lang: string): void {

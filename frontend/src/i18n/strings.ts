@@ -106,6 +106,12 @@ export const strings = {
       },
       unitM: 'Meter',
       unitKm: 'Kilometer',
+      bgWarn: {
+        title: 'Hinweis',
+        body: 'Sperrst du den Bildschirm oder wechselst die App, kann die Sprachausgabe pausieren.',
+        dismiss: 'Verstanden',
+        dismissForever: 'Nicht mehr anzeigen'
+      },
       debug: {
         enable: 'Navigation simulieren (Debug)',
         title: 'Debug-Navigation',
@@ -235,6 +241,12 @@ export const strings = {
       },
       unitM: 'metres',
       unitKm: 'kilometres',
+      bgWarn: {
+        title: 'Heads up',
+        body: 'Voice prompts may pause if you lock the screen or switch apps.',
+        dismiss: 'Got it',
+        dismissForever: "Don't show again"
+      },
       debug: {
         enable: 'Simulate navigation (debug)',
         title: 'Debug navigation',

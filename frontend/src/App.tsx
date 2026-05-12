@@ -6,6 +6,7 @@ import { NavDebugPanel } from './components/NavDebugPanel'
 import { useRoute } from './hooks/useRoute'
 import { useNavigation, type NavCue } from './hooks/useNavigation'
 import { useNavDebug } from './hooks/useNavDebug'
+import { useWakeLock } from './hooks/useWakeLock'
 import { useTTS } from './tts/useTTS'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
@@ -74,6 +75,8 @@ export default function App() {
   }, [composeCue, tts, speechLang])
 
   const nav = useNavigation(route, handleCue, debugNav ? debug.pos : null)
+
+  useWakeLock(nav.active)
 
   // If the user disables debug mid-navigation, exit nav so they don't get stuck
   // without a real GPS fix.

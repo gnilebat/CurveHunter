@@ -97,7 +97,7 @@ export function Map({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const waypointMarkers = useRef<maplibregl.Marker[]>([])
   const userMarker = useRef<maplibregl.Marker | null>(null)
-  const userArrow = useRef<HTMLDivElement | null>(null)
+  const userArrow = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -284,16 +284,15 @@ export function Map({
           background:#2563eb;border:3px solid #fff;
           box-shadow:0 0 0 2px rgba(37,99,235,0.35),0 2px 6px rgba(0,0,0,.4);
           display:flex;align-items:center;justify-content:center;
+          line-height:0;
         ">
-          <div data-arrow style="
-            width:0;height:0;
-            border-left:5px solid transparent;border-right:5px solid transparent;
-            border-bottom:9px solid #fff;
-            transform-origin:center 70%;
-            transition:transform 0.3s;
-          "></div>
+          <svg data-arrow xmlns="http://www.w3.org/2000/svg"
+               width="12" height="12" viewBox="-10 -10 20 20"
+               style="display:block;transform-origin:center center;transition:transform 0.2s;">
+            <polygon points="0,-7 5,5 0,2 -5,5" fill="#fff" />
+          </svg>
         </div>`
-      userArrow.current = el.querySelector('[data-arrow]') as HTMLDivElement | null
+      userArrow.current = el.querySelector('[data-arrow]') as HTMLElement | null
       userMarker.current = new maplibregl.Marker({ element: el })
         .setLngLat([userPos.lng, userPos.lat])
         .addTo(map)

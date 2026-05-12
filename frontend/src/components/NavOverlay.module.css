@@ -109,6 +109,85 @@
 
 /* ── Off-route banner ──────────────────────────────────────────────────────── */
 
+.bgWarn {
+  margin: 0 12px 10px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid #fdba74;
+  color: #7c2d12;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 10px;
+  align-items: center;
+  pointer-events: auto;
+  box-shadow:
+    0 0 0 4px rgba(249, 115, 22, 0.18),
+    0 8px 22px rgba(249, 115, 22, 0.25);
+  animation: bgWarnPop 0.25s ease-out;
+}
+
+@keyframes bgWarnPop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.bgWarnIcon {
+  font-size: 22px;
+  line-height: 1;
+  color: #ea580c;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.05));
+}
+
+.bgWarnText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.35;
+}
+
+.bgWarnText strong {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c2410c;
+}
+
+.bgWarnActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bgWarnBtn {
+  background: #f97316;
+  border: 1px solid #f97316;
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.bgWarnBtn:hover {
+  background: #ea580c;
+  border-color: #ea580c;
+}
+
+.bgWarnBtnSubtle {
+  background: transparent;
+  border-color: #fdba74;
+  color: #c2410c;
+}
+.bgWarnBtnSubtle:hover {
+  background: rgba(249, 115, 22, 0.08);
+  color: #9a3412;
+}
+
 .offRoute {
   margin: 0 12px;
   background: #fef2f2;
