@@ -114,110 +114,47 @@
   line-height: 1.4;
 }
 
-/* — Intense (curviness) — fun gradient fill + hot-mode glow past the marker — */
+/* — Intense (curviness) — solid tiered fill colour, no animations.
+   Tier band is computed in JS and supplied via --fill-color:
+     ≤ 50%  green   (#16a34a)
+     ≤ 100% yellow  (#eab308)
+     > 100% red     (#dc2626)
+   At exactly 200% a static red glow is added via the .glow class. */
 
 .intense .range {
-  /* Rainbow fill scales to --pct of the track; rest is the regular border colour. */
   background:
     linear-gradient(
       90deg,
-      #16a34a 0%,
-      #84cc16 18%,
-      #eab308 35%,
-      #f97316 50%,
-      #dc2626 65%,
-      #db2777 82%,
-      #7c3aed 100%
-    ) 0 0 / var(--pct, 0%) 100% no-repeat,
-    var(--border);
-  transition: background-size 0.15s;
+      var(--fill-color) 0%,
+      var(--fill-color) var(--pct, 0%),
+      var(--border) var(--pct, 0%),
+      var(--border) 100%
+    );
+  transition: background 0.15s;
 }
 
 .intense .value {
-  /* Hue shifts with intensity: orange → red → magenta as you push past 100%. */
-  color: hsl(
-    calc(28deg - var(--intensity, 0) * 70deg),
-    90%,
-    50%
-  );
-  transition: color 0.2s, transform 0.2s;
-  transform: scale(calc(1 + var(--intensity, 0) * 0.18));
-  transform-origin: right center;
+  color: var(--fill-color);
+  transition: color 0.15s;
 }
 
-/* Hot-mode animations intensify with --hot-intensity (0..1, 100%→200%).
-   Duration shrinks (slower pulse → frantic), glow radius and opacity grow. */
-
-.intense.hot .range::-webkit-slider-thumb {
+.intense.glow .range::-webkit-slider-thumb {
   border-color: #dc2626;
-  animation: thumbPulse calc(1.6s - var(--hot-intensity, 0) * 1.15s) ease-in-out infinite;
+  box-shadow:
+    0 0 0 4px rgba(220, 38, 38, 0.35),
+    0 0 14px rgba(220, 38, 38, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-.intense.hot .range::-moz-range-thumb {
+.intense.glow .range::-moz-range-thumb {
   border-color: #dc2626;
-  animation: thumbPulse calc(1.6s - var(--hot-intensity, 0) * 1.15s) ease-in-out infinite;
+  box-shadow:
+    0 0 0 4px rgba(220, 38, 38, 0.35),
+    0 0 14px rgba(220, 38, 38, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-.intense.hot .value {
-  animation: valueFlare calc(1.8s - var(--hot-intensity, 0) * 1.2s) ease-in-out infinite;
-}
-
-/* Ripple overlay on the filled portion of the track. Repeating bright
-   crests travel left → right; speed and contrast intensify past 100%. */
-.intense.hot .trackWrap::before {
-  content: '';
-  position: absolute;
-  inset: 50% 0 auto 0;
-  height: 6px;
-  transform: translateY(-50%);
+.intense.glow .range {
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.45);
   border-radius: 3px;
-  width: var(--pct, 0%);
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    rgba(255, 255, 255, calc(0.10 + var(--hot-intensity, 0) * 0.55)) 8px,
-    transparent 16px,
-    transparent 28px
-  );
-  background-size: 200% 100%;
-  mix-blend-mode: overlay;
-  animation: ripple calc(2.2s - var(--hot-intensity, 0) * 1.85s) linear infinite;
-}
-
-@keyframes thumbPulse {
-  0%, 100% {
-    box-shadow:
-      0 0 0 0 rgba(220, 38, 38, calc(0.4 + var(--hot-intensity, 0) * 0.4)),
-      0 2px 6px rgba(0, 0, 0, 0.18);
-  }
-  50% {
-    box-shadow:
-      0 0 0 calc(4px + var(--hot-intensity, 0) * 10px) rgba(220, 38, 38, 0),
-      0 2px calc(8px + var(--hot-intensity, 0) * 12px)
-        rgba(220, 38, 38, calc(0.35 + var(--hot-intensity, 0) * 0.4));
-  }
-}
-
-@keyframes valueFlare {
-  0%, 100% { text-shadow: 0 0 0 transparent; }
-  50% {
-    text-shadow:
-      0 0 calc(6px + var(--hot-intensity, 0) * 14px)
-      rgba(220, 38, 38, calc(0.45 + var(--hot-intensity, 0) * 0.45));
-  }
-}
-
-@keyframes ripple {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: 64px 50%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .intense.hot .range::-webkit-slider-thumb,
-  .intense.hot .range::-moz-range-thumb,
-  .intense.hot .value,
-  .intense.hot .trackWrap::before {
-    animation: none;
-  }
 }

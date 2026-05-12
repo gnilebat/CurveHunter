@@ -24,27 +24,23 @@ export function Slider({
   const markerPct = markerAt !== undefined ? Math.round((markerAt / max) * 100) : null
   const showWarning =
     markerAt !== undefined && warningOverMarker && value > markerAt
-  const isHot = intense && markerAt !== undefined && value > markerAt
-  const intensity = intense ? Math.min(1, value / max) : 0
-  // 0 at the marker, ramps to 1 at max. Drives animation intensity past 100%.
-  const hotIntensity =
-    intense && markerAt !== undefined && max > markerAt
-      ? Math.min(1, Math.max(0, (value - markerAt) / (max - markerAt)))
-      : 0
+  // Tiered fill colour for the intense (curviness) slider. Bands by % of the
+  // displayed value (0..200%): green ≤50, yellow ≤100, red beyond.
+  const fillColor = intense
+    ? (pct <= 50 ? '#16a34a' : pct <= 100 ? '#eab308' : '#dc2626')
+    : undefined
+  const atMax = intense && value >= max
 
   const wrapClasses = [
     styles.wrap,
     intense ? styles.intense : '',
-    isHot ? styles.hot : ''
+    atMax ? styles.glow : ''
   ].filter(Boolean).join(' ')
 
   return (
     <div
       className={wrapClasses}
-      style={{
-        '--intensity': intensity,
-        '--hot-intensity': hotIntensity
-      } as React.CSSProperties}
+      style={fillColor ? { '--fill-color': fillColor } as React.CSSProperties : undefined}
     >
       <div className={styles.head}>
         <span className={styles.label}>{label}</span>
