@@ -68,7 +68,7 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
 
 export const PRESET_ORDER: PresetId[] = ['fastest', 'curvy', 'curvyPlus', 'curvyMax']
 
-export const DEFAULT_ROUTE_OPTIONS: RouteOptions = ROUTE_PRESETS.curvy
+export const DEFAULT_ROUTE_OPTIONS: RouteOptions = ROUTE_PRESETS.curvyPlus
 
 export function matchPreset(opts: RouteOptions): PresetId | null {
   for (const id of PRESET_ORDER) {

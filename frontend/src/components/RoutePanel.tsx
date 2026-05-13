@@ -13,8 +13,6 @@ import { StepSlider } from './StepSlider'
 import { InfoIcon } from './InfoIcon'
 import { ElevationChart } from './ElevationChart'
 import { useLocale } from '../i18n/LocaleProvider'
-import { LOCALES } from '../i18n/strings'
-import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
 import styles from './RoutePanel.module.css'
 
 interface Props {
@@ -33,8 +31,6 @@ interface Props {
   onRetry: () => void
   onStartNavigation: () => void
   anyWaypointSet: boolean
-  debugNav: boolean
-  onToggleDebugNav: (on: boolean) => void
 
   customPresets: CustomPreset[]
   activeCustomPresetId: string | null
@@ -101,7 +97,6 @@ export function RoutePanel({
   onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation,
   anyWaypointSet,
-  debugNav, onToggleDebugNav,
   customPresets, activeCustomPresetId,
   onApplyCustomPreset, onDeleteCustomPreset,
   onOpenMenu, onSavePlace, onSaveRoute, onSavePreset, onExportGpx, onShareRoute,
@@ -112,8 +107,7 @@ export function RoutePanel({
   activeIdx, onSetActiveIdx
 }: Props) {
   const activePreset = matchPreset(options)
-  const { t, locale, setLocale } = useLocale()
-  const { theme, setTheme } = useTheme()
+  const { t, locale } = useLocale()
   const [geoLoading, setGeoLoading] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(true)
 
@@ -271,6 +265,38 @@ export function RoutePanel({
       </div>
 
       <div className={styles.inputsBlock}>
+        <div className={styles.startActionsRow}>
+          <button
+            className={styles.iconBtn}
+            title={t('panel.useMyLocation')}
+            onClick={useMyLocation}
+            disabled={geoLoading}
+            aria-label={t('panel.useMyLocation')}
+          >
+            {geoLoading ? '…' : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="7" />
+                <line x1="12" y1="2" x2="12" y2="5" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="5" y2="12" />
+                <line x1="19" y1="12" x2="22" y2="12" />
+              </svg>
+            )}
+          </button>
+          <button
+            className={styles.iconBtn}
+            title={t('panel.savePlace')}
+            onClick={onSavePlace}
+            disabled={!waypoints[0]}
+            aria-label={t('panel.savePlace')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+          </button>
+        </div>
+
         {waypoints.map((wp, idx) => {
           if (roundTripEnabled && idx > 0) return null
           const isFirst = idx === 0
@@ -289,62 +315,24 @@ export function RoutePanel({
                   shouldFocus={activeIdx === idx}
                   onInputFocus={() => onSetActiveIdx(idx)}
                 />
-                {isFirst ? (
-                  <>
-                    <button
-                      className={styles.iconBtn}
-                      title={t('panel.useMyLocation')}
-                      onClick={useMyLocation}
-                      disabled={geoLoading}
-                      aria-label={t('panel.useMyLocation')}
-                    >
-                      {geoLoading ? '…' : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-                          <circle cx="12" cy="12" r="7" />
-                          <line x1="12" y1="2" x2="12" y2="5" />
-                          <line x1="12" y1="19" x2="12" y2="22" />
-                          <line x1="2" y1="12" x2="5" y2="12" />
-                          <line x1="19" y1="12" x2="22" y2="12" />
-                        </svg>
-                      )}
-                    </button>
-                    <button
-                      className={styles.iconBtn}
-                      title={t('panel.savePlace')}
-                      onClick={onSavePlace}
-                      disabled={!wp}
-                      aria-label={t('panel.savePlace')}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                      </svg>
-                    </button>
-                  </>
-                ) : isIntermediate ? (
-                  <>
-                    <button
-                      className={styles.iconBtn}
-                      title={t('panel.removeVia')}
-                      onClick={() => onRemove(idx)}
-                      aria-label={t('panel.removeVia')}
-                    >×</button>
-                    <span className={styles.iconBtnPlaceholder} />
-                  </>
-                ) : (
-                  <>
-                    <span className={styles.iconBtnPlaceholder} />
-                    <span className={styles.iconBtnPlaceholder} />
-                  </>
+                {isIntermediate && (
+                  <button
+                    className={styles.iconBtn}
+                    title={t('panel.removeVia')}
+                    onClick={() => onRemove(idx)}
+                    aria-label={t('panel.removeVia')}
+                  >×</button>
                 )}
               </div>
               {!isLast && (
-                <button
-                  className={styles.swapBtn}
-                  onClick={() => onInsertAfter(idx)}
-                  title={t('panel.addBelow')}
-                  aria-label={t('panel.addBelow')}
-                >+</button>
+                <div className={styles.viaBtnRow}>
+                  <button
+                    className={styles.viaBtn}
+                    onClick={() => onInsertAfter(idx)}
+                    title={t('panel.addBelow')}
+                    aria-label={t('panel.addBelow')}
+                  >+</button>
+                </div>
               )}
             </Fragment>
           )
@@ -636,49 +624,6 @@ export function RoutePanel({
       {(anyWaypointSet || route) && (
         <button className={styles.clearBtn} onClick={onClear}>{t('panel.clearAll')}</button>
       )}
-
-      <label className={styles.toggle} style={{ fontSize: 12, opacity: 0.85 }}>
-        <input
-          type="checkbox"
-          checked={debugNav}
-          onChange={(e) => onToggleDebugNav(e.target.checked)}
-        />
-        <span className={styles.toggleLabel}>{t('nav.debug.enable')}</span>
-      </label>
-
-      <div className={styles.langRow}>
-        <div className={styles.settingsGroup}>
-          <span className={styles.langLabel}>{t('panel.language')}</span>
-          <div className={styles.langToggle} role="group">
-            {LOCALES.map((l) => (
-              <button
-                key={l}
-                className={`${styles.langBtn} ${locale === l ? styles.langBtnActive : ''}`}
-                onClick={() => setLocale(l)}
-                aria-pressed={locale === l}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className={styles.settingsGroup}>
-          <span className={styles.langLabel}>{t('panel.theme')}</span>
-          <div className={styles.langToggle} role="group">
-            {THEMES.map((th: Theme) => (
-              <button
-                key={th}
-                className={`${styles.langBtn} ${theme === th ? styles.langBtnActive : ''}`}
-                onClick={() => setTheme(th)}
-                aria-pressed={theme === th}
-                aria-label={t(th === 'light' ? 'panel.themeLight' : 'panel.themeDark')}
-              >
-                {th === 'light' ? '☀' : '☾'}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
       <footer className={styles.footer}>
         © <a href="https://openstreetmap.org" target="_blank" rel="noreferrer">OpenStreetMap</a>

@@ -11,8 +11,8 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #d1d5db;
-  color: #fff;
+  background: var(--border-strong);
+  color: var(--bg);
   font-size: 10px;
   font-weight: 700;
   font-family: Georgia, 'Times New Roman', serif;

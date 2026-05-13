@@ -23,7 +23,6 @@ import { buildShareUrl, decodeRoute } from './lib/share'
 import type { Waypoint, RouteOptions } from './types'
 import './App.css'
 
-const DEBUG_NAV_KEY = 'curvehunter.debug.nav'
 const AUTO_ZOOM_KEY = 'curvehunter.nav.autoZoom'
 
 function sameOptions(a: RouteOptions, b: RouteOptions): boolean {
@@ -62,14 +61,10 @@ export default function App() {
   const { locale, t } = useLocale()
   const speechLang = locale === 'de' ? 'de-DE' : 'en-US'
 
-  const [debugNav, setDebugNavState] = useState<boolean>(() => {
-    try { return localStorage.getItem(DEBUG_NAV_KEY) === 'true' } catch { return false }
-  })
-  const setDebugNav = useCallback((on: boolean) => {
-    setDebugNavState(on)
-    try { localStorage.setItem(DEBUG_NAV_KEY, on ? 'true' : 'false') } catch { /* ignore */ }
-  }, [])
-  const debug = useNavDebug(route, debugNav)
+  // Route-preview simulator. Only active while navigation is running AND the
+  // user has explicitly opened the preview panel from the nav overlay.
+  const [simOpen, setSimOpen] = useState(false)
+  const debug = useNavDebug(route, simOpen)
 
   const [autoZoom, setAutoZoomState] = useState<boolean>(() => {
     try { return localStorage.getItem(AUTO_ZOOM_KEY) === 'true' } catch { return false }
@@ -245,7 +240,7 @@ export default function App() {
     tts.speak(text, speechLang)
   }, [composeCue, tts, speechLang])
 
-  const nav = useNavigation(route, handleCue, debugNav ? debug.pos : null)
+  const nav = useNavigation(route, handleCue, simOpen ? debug.pos : null)
 
   useWakeLock(nav.active)
 
@@ -257,21 +252,14 @@ export default function App() {
       ? Math.min(panelHeight, typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)
       : 0
 
-  // If the user disables debug mid-navigation, exit nav so they don't get stuck
-  // without a real GPS fix.
+  // When navigation stops, close + reset the preview simulator so it doesn't
+  // keep advancing in the background (which was also feeding stale off-route
+  // cues to TTS).
   useEffect(() => {
-    if (!debugNav && nav.active && debug.pos === null) {
-      // no-op; nav already uses real GPS from this point
-    }
-  }, [debugNav, nav.active, debug.pos])
-
-  // When navigation stops, pause and rewind the debug simulator so it
-  // doesn't keep advancing in the background (which was also feeding stale
-  // off-route cues to TTS).
-  useEffect(() => {
-    if (!nav.active && debugNav) {
+    if (!nav.active && simOpen) {
       debug.setPlaying(false)
       debug.reset()
+      setSimOpen(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.active])
@@ -341,8 +329,6 @@ export default function App() {
           onRetry={retry}
           onStartNavigation={nav.start}
           anyWaypointSet={anyWaypointSet}
-          debugNav={debugNav}
-          onToggleDebugNav={setDebugNav}
           customPresets={customPresets.presets}
           activeCustomPresetId={activeCustomPresetId}
           onApplyCustomPreset={(p) => setOptions(p.options)}
@@ -399,9 +385,11 @@ export default function App() {
             onToggleVoice={() => tts.setEnabled(!tts.enabled)}
             recalculating={loading}
             maxSpeed={nav.currentMaxSpeed}
+            simulateOpen={simOpen}
+            onToggleSimulate={() => setSimOpen(o => !o)}
           />
         )}
-        {nav.active && debugNav && (
+        {nav.active && simOpen && (
           <NavDebugPanel
             traveledM={debug.traveledM}
             totalM={debug.totalM}
@@ -413,7 +401,7 @@ export default function App() {
             onStep={() => debug.step(100)}
             onNextTurn={debug.jumpToNextTurn}
             onReset={debug.reset}
-            onClose={() => setDebugNav(false)}
+            onClose={() => setSimOpen(false)}
           />
         )}
       </div>

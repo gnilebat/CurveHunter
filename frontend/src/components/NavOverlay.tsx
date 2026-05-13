@@ -22,6 +22,11 @@ interface Props {
   onToggleVoice: () => void
   recalculating: boolean
   maxSpeed: number   // 0 = unknown
+  /** Route preview/simulation panel — toggled by a control next to the
+   *  mute button. End-users can use it to step through their planned route
+   *  before they start riding. */
+  simulateOpen: boolean
+  onToggleSimulate: () => void
 }
 
 // GraphHopper sign → translation key under `nav.verb`
@@ -51,7 +56,8 @@ export function NavOverlay({
   distanceToNextTurnM, distanceRemainingM, durationRemainingS, speedMs,
   offRoute, arrived, onStop, onRecalculate,
   voiceEnabled, voiceAvailable, onToggleVoice,
-  recalculating, maxSpeed
+  recalculating, maxSpeed,
+  simulateOpen, onToggleSimulate
 }: Props) {
   const { t, locale } = useLocale()
   const localeTag = locale === 'de' ? 'de-DE' : 'en-US'
@@ -117,6 +123,21 @@ export function NavOverlay({
     return arrival.toLocaleTimeString(localeTag, { hour: '2-digit', minute: '2-digit' })
   }
 
+  const simulateButton = (
+    <button
+      className={styles.closeBtn}
+      onClick={onToggleSimulate}
+      aria-label={t('nav.sim.toggle')}
+      title={t('nav.sim.toggle')}
+      aria-pressed={simulateOpen}
+      style={simulateOpen ? { color: 'var(--accent)' } : undefined}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <polygon points="5 3 19 12 5 21 5 3" fill={simulateOpen ? 'currentColor' : 'none'} />
+      </svg>
+    </button>
+  )
+
   const voiceButton = voiceAvailable ? (
     <button
       className={styles.closeBtn}
@@ -156,6 +177,7 @@ export function NavOverlay({
             <span className={styles.etaTime}>—</span>
             <span className={styles.etaSub}>{t('nav.endOfRoute')}</span>
           </div>
+          {simulateButton}
           {voiceButton}
           <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
         </div>
@@ -245,6 +267,7 @@ export function NavOverlay({
             {' · '}{t('nav.etaLabel')} {formatETA(durationRemainingS)}
           </span>
         </div>
+        {simulateButton}
         {voiceButton}
         <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
       </div>

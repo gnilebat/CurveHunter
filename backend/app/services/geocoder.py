@@ -10,6 +10,11 @@ from typing import Any
 GEOCODER_URL = os.environ.get("GEOCODER_URL", "http://photon:2322")
 GEOCODER_LANG = os.environ.get("GEOCODER_LANG", "de")  # de | en | fr | it
 
+# Germany bounding box (minLon, minLat, maxLon, maxLat). Photon hard-filters
+# results to this bbox, so we never surface foreign hits in autocomplete.
+# Override via env if the app's coverage area ever changes.
+GEOCODER_BBOX = os.environ.get("GEOCODER_BBOX", "5.87,47.27,15.04,55.10")
+
 
 def _display_name_from_props(props: dict[str, Any]) -> str:
     """Build a comma-joined human-readable address from Photon's property fields."""
@@ -38,11 +43,13 @@ def _display_name_from_props(props: dict[str, Any]) -> str:
 
 async def search(query: str, limit: int = 6) -> list[dict[str, Any]]:
     """Return Nominatim-shaped rows so the existing router code is unchanged."""
-    params = {
+    params: dict[str, Any] = {
         "q": query,
         "limit": limit,
         "lang": GEOCODER_LANG
     }
+    if GEOCODER_BBOX:
+        params["bbox"] = GEOCODER_BBOX
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(f"{GEOCODER_URL}/api/", params=params)
         resp.raise_for_status()

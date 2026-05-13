@@ -46,11 +46,11 @@ export const strings = {
       legendHighwayTitle: 'Autobahn / Kraftfahrstraße',
       legendHighwayLow: 'gerade',
       legendHighwayHigh: 'kurvig',
-      curvyStraight: 'Pfeilgerade',
-      curvyWinding: 'Etwas Schwung',
-      curvyCurvy: 'Schräglagen-Spaß',
-      curvyTwisty: 'Knieschleifer-Alarm',
-      curvyExtreme: 'Alpenpass-Niveau',
+      curvyStraight: 'Langweilig',
+      curvyWinding: 'Naja',
+      curvyCurvy: 'Schräglage',
+      curvyTwisty: 'Knieschleifer',
+      curvyExtreme: 'Alpenpass',
       language: 'Sprache',
       theme: 'Design',
       themeLight: 'Hell',
@@ -156,9 +156,9 @@ export const strings = {
         dismiss: 'Verstanden',
         dismissForever: 'Nicht mehr anzeigen'
       },
-      debug: {
-        enable: 'Navigation simulieren (Debug)',
-        title: 'Debug-Navigation',
+      sim: {
+        title: 'Routenvorschau',
+        toggle: 'Vorschau',
         play: 'Abspielen',
         pause: 'Pause',
         step: '+ 100 m',
@@ -335,9 +335,9 @@ export const strings = {
         dismiss: 'Got it',
         dismissForever: "Don't show again"
       },
-      debug: {
-        enable: 'Simulate navigation (debug)',
-        title: 'Debug navigation',
+      sim: {
+        title: 'Route preview',
+        toggle: 'Preview',
         play: 'Play',
         pause: 'Pause',
         step: '+ 100 m',

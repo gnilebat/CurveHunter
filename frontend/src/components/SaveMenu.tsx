@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useLocale } from '../i18n/LocaleProvider'
+import { LOCALES } from '../i18n/strings'
+import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
 import { ConfirmDialog } from './ConfirmDialog'
 import { PromptDialog } from './PromptDialog'
 import type { SavedRoute } from '../hooks/useSavedRoutes'
@@ -44,7 +46,8 @@ export function SaveMenu({
   onRenameRoute, onRenamePreset, onRenamePlace,
   onDeleteRoute, onDeletePreset, onDeletePlace
 }: Props) {
-  const { t } = useLocale()
+  const { t, locale, setLocale } = useLocale()
+  const { theme, setTheme } = useTheme()
   const [tab, setTab] = useState<Tab>('routes')
   const [pending, setPending] = useState<Pending | null>(null)
 
@@ -73,6 +76,40 @@ export function SaveMenu({
           <span className={styles.title}>{t('save.menuTitle')}</span>
           <button className={styles.closeBtn} onClick={onClose} aria-label={t('save.close')}>×</button>
         </header>
+
+        <section className={styles.settings}>
+          <div className={styles.settingsGroup}>
+            <span className={styles.settingsLabel}>{t('panel.language')}</span>
+            <div className={styles.toggle} role="group">
+              {LOCALES.map((l) => (
+                <button
+                  key={l}
+                  className={`${styles.toggleBtn} ${locale === l ? styles.toggleBtnActive : ''}`}
+                  onClick={() => setLocale(l)}
+                  aria-pressed={locale === l}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.settingsGroup}>
+            <span className={styles.settingsLabel}>{t('panel.theme')}</span>
+            <div className={styles.toggle} role="group">
+              {THEMES.map((th: Theme) => (
+                <button
+                  key={th}
+                  className={`${styles.toggleBtn} ${theme === th ? styles.toggleBtnActive : ''}`}
+                  onClick={() => setTheme(th)}
+                  aria-pressed={theme === th}
+                  aria-label={t(th === 'light' ? 'panel.themeLight' : 'panel.themeDark')}
+                >
+                  {th === 'light' ? '☀' : '☾'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         <div className={styles.tabs} role="tablist">
           <button

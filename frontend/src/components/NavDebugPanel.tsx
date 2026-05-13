@@ -27,24 +27,24 @@ export function NavDebugPanel({
   const pct = totalM > 0 ? Math.round((traveledM / totalM) * 100) : 0
 
   return (
-    <div className={styles.wrap} role="region" aria-label={t('nav.debug.title')}>
+    <div className={styles.wrap} role="region" aria-label={t('nav.sim.title')}>
       <div className={styles.head}>
-        <span className={styles.title}>{t('nav.debug.title')}</span>
-        <button className={styles.iconBtn} onClick={onClose} aria-label={t('nav.debug.close')}>×</button>
+        <span className={styles.title}>{t('nav.sim.title')}</span>
+        <button className={styles.iconBtn} onClick={onClose} aria-label={t('nav.sim.close')}>×</button>
       </div>
 
       <div className={styles.row}>
         <button className={styles.primaryBtn} onClick={onPlayToggle}>
-          {playing ? `⏸ ${t('nav.debug.pause')}` : `▶ ${t('nav.debug.play')}`}
+          {playing ? `⏸ ${t('nav.sim.pause')}` : `▶ ${t('nav.sim.play')}`}
         </button>
-        <button className={styles.btn} onClick={onStep}>{t('nav.debug.step')}</button>
-        <button className={styles.btn} onClick={onNextTurn}>{t('nav.debug.nextTurn')}</button>
-        <button className={styles.btn} onClick={onReset}>{t('nav.debug.reset')}</button>
+        <button className={styles.btn} onClick={onStep}>{t('nav.sim.step')}</button>
+        <button className={styles.btn} onClick={onNextTurn}>{t('nav.sim.nextTurn')}</button>
+        <button className={styles.btn} onClick={onReset}>{t('nav.sim.reset')}</button>
       </div>
 
       <label className={styles.field}>
         <span className={styles.fieldLabel}>
-          {t('nav.debug.position')} — {pct}% ({formatKm(traveledM)} / {formatKm(totalM)})
+          {t('nav.sim.position')} — {pct}% ({formatKm(traveledM)} / {formatKm(totalM)})
         </span>
         <input
           type="range"
@@ -58,7 +58,7 @@ export function NavDebugPanel({
       </label>
 
       <label className={styles.field}>
-        <span className={styles.fieldLabel}>{t('nav.debug.speed')} — {speedKmh} km/h</span>
+        <span className={styles.fieldLabel}>{t('nav.sim.speed')} — {speedKmh} km/h</span>
         <input
           type="range"
           min={10}

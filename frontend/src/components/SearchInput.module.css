@@ -6,14 +6,17 @@
 .input {
   width: 100%;
   padding: 9px 36px 9px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--bg);
+  color: var(--text);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+
+.input::placeholder { color: var(--text-faint); }
 
 .input:focus {
   border-color: var(--accent);
@@ -21,12 +24,14 @@
 }
 
 .inputSelected {
-  background: #f0fdf4;
-  border-color: #86efac;
+  /* Subtle green tint that works on both light and dark backgrounds — text
+     still inherits var(--text) so a filled input stays readable. */
+  background: color-mix(in srgb, #22c55e 14%, var(--bg));
+  border-color: color-mix(in srgb, #22c55e 55%, var(--border));
 }
 
 .inputSelected:focus {
-  background: #fff;
+  background: var(--bg);
 }
 
 .spinner {
@@ -54,8 +59,8 @@
   height: 20px;
   border: none;
   border-radius: 50%;
-  background: #e5e7eb;
-  color: #6b7280;
+  background: var(--bg-hover);
+  color: var(--text-muted);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -76,8 +81,9 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #d1d5db;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   list-style: none;
   margin: 0;
@@ -107,7 +113,7 @@
 }
 
 .itemHi {
-  background: #fff7ed;
+  background: var(--bg-accent);
   border-left-color: var(--accent);
 }
 
@@ -115,7 +121,7 @@
   background: rgba(245, 158, 11, 0.06);
 }
 .itemSaved.itemHi {
-  background: #fff7ed;
+  background: var(--bg-accent);
 }
 
 .itemBadge {
@@ -136,12 +142,12 @@
 
 .itemName {
   font-weight: 600;
-  color: #111827;
+  color: var(--text);
 }
 
 .itemDetail {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -150,7 +156,7 @@
 .empty {
   padding: 12px;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-faint);
   text-align: center;
   font-style: italic;
 }

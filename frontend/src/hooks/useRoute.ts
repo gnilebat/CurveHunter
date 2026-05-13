@@ -1,9 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { ApiError, fetchRoute, type RoundTripParams } from '../api/client'
 import { DEFAULT_ROUTE_OPTIONS } from '../types'
+import { getJSON, setJSON } from '../lib/storage'
 import type { Waypoint, RouteResult, RouteOptions, AlternativeRoute } from '../types'
 
 const ROUTE_DEBOUNCE_MS = 450
+
+const OPTIONS_KEY = 'curvehunter.routeOptions'
+const ROUND_TRIP_KEY = 'curvehunter.roundTrip'
 
 export interface RoundTripState {
   enabled: boolean
@@ -41,10 +45,25 @@ function classifyRouteError(err: unknown): RouteError {
 export function useRoute() {
   const [waypoints, setWaypointsState] = useState<(Waypoint | null)[]>([null, null])
   const [route, setRoute] = useState<RouteResult | null>(null)
-  const [options, setOptionsState] = useState<RouteOptions>(DEFAULT_ROUTE_OPTIONS)
+  // Restore the user's last preset / option tweaks and round-trip toggle so
+  // reloading the page doesn't reset them. The seed is intentionally dropped
+  // — a fresh visit shouldn't replay the exact previous round trip geometry.
+  const [options, setOptionsState] = useState<RouteOptions>(
+    () => getJSON<RouteOptions>(OPTIONS_KEY, DEFAULT_ROUTE_OPTIONS)
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<RouteError | null>(null)
-  const [roundTrip, setRoundTripState] = useState<RoundTripState>(DEFAULT_ROUND_TRIP)
+  const [roundTrip, setRoundTripState] = useState<RoundTripState>(() => {
+    const stored = getJSON<RoundTripState>(ROUND_TRIP_KEY, DEFAULT_ROUND_TRIP)
+    return { ...stored, seed: undefined }
+  })
+
+  useEffect(() => { setJSON(OPTIONS_KEY, options) }, [options])
+  useEffect(() => {
+    // Don't persist the random seed — only the user-chosen toggle + distance.
+    const { enabled, distanceKm } = roundTrip
+    setJSON(ROUND_TRIP_KEY, { enabled, distanceKm } satisfies RoundTripState)
+  }, [roundTrip])
   const reqId = useRef(0)
 
   const planRoute = useCallback(async (
