@@ -114,12 +114,15 @@ async def route(
     min_curve_speed: int,
     avoid_unpaved: bool,
     round_trip_distance_m: int | None = None,
-    round_trip_seed: int | None = None
+    round_trip_seed: int | None = None,
+    request_alternatives: bool = False
 ) -> dict[str, Any]:
     is_round_trip = round_trip_distance_m is not None
 
+    # CH (default) profile can't combine with custom_model OR alternative_route,
+    # so force flex routing whenever either is requested.
     use_defaults = (
-        not is_round_trip and _is_default(
+        not is_round_trip and not request_alternatives and _is_default(
             curviness, avoid_motorways, avoid_trunks, avoid_urban,
             ignore_urban_curves, min_curve_speed, avoid_unpaved
         )
@@ -152,6 +155,14 @@ async def route(
         payload["round_trip.distance"] = round_trip_distance_m
         if round_trip_seed is not None:
             payload["round_trip.seed"] = round_trip_seed
+    elif request_alternatives:
+        # Ask GraphHopper for up to 3 paths total: 1 best + 2 alternatives.
+        # max_weight_factor caps how much longer an alternative can be vs the
+        # best. 1.6 keeps the alternatives "reasonable" (not 2x the distance).
+        payload["algorithm"] = "alternative_route"
+        payload["alternative_route.max_paths"] = 3
+        payload["alternative_route.max_weight_factor"] = 1.6
+        payload["alternative_route.max_share_factor"] = 0.7
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(f"{GH_URL}/route", json=payload)

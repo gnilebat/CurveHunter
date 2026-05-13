@@ -57,3 +57,39 @@ export function defaultGpxFilename(): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `Schraeglage-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.gpx`
 }
+
+/** Parse a GPX document into a list of Waypoints suitable for the planner.
+ *  Preference order:
+ *    1. <rtept> route points (a planned route)
+ *    2. <wpt>   user waypoints
+ *    3. First + last <trkpt> of a recorded track (start/end only).
+ *  Throws on malformed XML or empty inputs. */
+export function parseGpx(text: string): Waypoint[] {
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  if (doc.querySelector('parsererror')) {
+    throw new Error('Invalid GPX file')
+  }
+  const toWp = (el: Element, fallback: string): Waypoint => {
+    const lat = Number(el.getAttribute('lat'))
+    const lng = Number(el.getAttribute('lon'))
+    const name =
+      el.getElementsByTagName('name')[0]?.textContent?.trim() ||
+      `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    return { lat, lng, name: name || fallback }
+  }
+
+  const rtepts = Array.from(doc.getElementsByTagName('rtept'))
+  if (rtepts.length >= 2) return rtepts.map((e, i) => toWp(e, `Point ${i + 1}`))
+
+  const wpts = Array.from(doc.getElementsByTagName('wpt'))
+  if (wpts.length >= 2) return wpts.map((e, i) => toWp(e, `Waypoint ${i + 1}`))
+
+  const trkpts = Array.from(doc.getElementsByTagName('trkpt'))
+  if (trkpts.length >= 2) {
+    return [
+      toWp(trkpts[0], 'GPX start'),
+      toWp(trkpts[trkpts.length - 1], 'GPX end')
+    ]
+  }
+  throw new Error('GPX has no usable waypoints or track')
+}

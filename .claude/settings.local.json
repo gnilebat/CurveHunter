@@ -107,7 +107,10 @@
       "Bash(cat \"/c/Users/johan/AppData/Local/Temp/claude/f--projects-CurveHunter/235c36cc-d27e-42da-9366-f1a23472ff9e/tasks/bbfimav7j.output\" 2>/dev/null | tail -10)",
       "Read(//c/Users/johan/AppData/Local/Temp/claude/f--projects-CurveHunter/235c36cc-d27e-42da-9366-f1a23472ff9e/tasks/**)",
       "Bash(docker run *)",
-      "Bash(curl -sI -m 15 'https://download1.graphhopper.com/public/extracts/by-country-code/de/photon-db-de-1.0-latest.tar.bz2')"
+      "Bash(curl -sI -m 15 'https://download1.graphhopper.com/public/extracts/by-country-code/de/photon-db-de-1.0-latest.tar.bz2')",
+      "Bash(curl -sS -X POST https://ntfy.sh/schraeglage-Ag0Be5IXE1HCC54INB -H 'Title: Photon download' -H 'Content-Type: text/plain' --data-raw '10% — 5.8 / 56.5 GB')",
+      "Bash(curl -sS -X POST https://ntfy.sh/schraeglage-Ag0Be5IXE1HCC54INB -H 'Title: Schraeglage' -H 'Content-Type: text/plain' --data-raw 'Plain text confirmed. Future milestones land inline like this.')",
+      "Bash(curl -sS -X POST https://ntfy.sh/ -H 'Content-Type: application/json' --data-raw '{\"topic\":\"schraeglage-Ag0Be5IXE1HCC54INB\",\"title\":\"Schraeglage\",\"message\":\"JSON API test — should appear as inline notification\"}')"
     ]
   }
 }

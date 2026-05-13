@@ -114,13 +114,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 3px 8px rgba(77, 124, 223, 0.35);
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
 .menuBtn:hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
-  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 5px 12px rgba(77, 124, 223, 0.45);
 }
 .menuBtn:active { transform: translateY(0); }
 .menuBtn svg { width: 22px; height: 22px; stroke-width: 2.4; }
@@ -143,11 +143,28 @@
 
 .modeRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: 4px;
   background: var(--bg-elevated);
   padding: 4px;
   border-radius: 8px;
+}
+
+.modeImportBtn {
+  width: 36px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.modeImportBtn:hover {
+  background: var(--bg-hover);
+  color: var(--secondary);
 }
 
 .modeBtn {
@@ -527,7 +544,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 6px rgba(77, 124, 223, 0.35);
 }
 
 .optionsTitle {

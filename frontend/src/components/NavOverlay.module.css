@@ -11,10 +11,11 @@
 
 .topCard {
   margin: 12px;
-  background: #1a2a44;
+  background: linear-gradient(135deg, #1e2c4d 0%, #1a2640 100%);
   color: #fff;
   border-radius: 14px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(125, 163, 255, 0.18);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
   pointer-events: auto;
   overflow: hidden;
 }
@@ -47,7 +48,9 @@
   font-weight: 700;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  color: #fff;
+  /* Distance to the upcoming maneuver — brand amber so it stands out
+     against the navy card and ties to the rest of the UI's CTA color. */
+  color: var(--accent);
 }
 
 .smallLine {
@@ -90,7 +93,7 @@
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.05em;
-  color: #94a3b8;
+  color: var(--secondary);
   flex-shrink: 0;
 }
 

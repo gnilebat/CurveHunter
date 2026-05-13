@@ -11,13 +11,21 @@ interface Props {
   isSelected: boolean
   onChange: (result: SearchResult) => void
   onClear: () => void
+  /** When this flips to true, the input gets keyboard focus. Combine with a
+      changing key (or treat as "always focus while true") for re-focus support. */
+  shouldFocus?: boolean
+  /** Fired when the input gains focus from any source (click, tab, programmatic). */
+  onInputFocus?: () => void
 }
 
 interface Suggestion extends SearchResult {
   saved?: boolean
 }
 
-export function SearchInput({ placeholder, value, isSelected, onChange, onClear }: Props) {
+export function SearchInput({
+  placeholder, value, isSelected, onChange, onClear,
+  shouldFocus, onInputFocus
+}: Props) {
   const t = useT()
   const { places } = useSavedPlaces()
   const [query, setQuery] = useState(value)
@@ -31,6 +39,10 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
   const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => { setQuery(value) }, [value])
+
+  useEffect(() => {
+    if (shouldFocus) inputRef.current?.focus()
+  }, [shouldFocus])
 
   // Saved places matching the current query, marked so we can render a star.
   const savedMatches = useMemo<Suggestion[]>(() => {
@@ -142,7 +154,7 @@ export function SearchInput({ placeholder, value, isSelected, onChange, onClear 
         placeholder={placeholder}
         onChange={(e) => handleInput(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onFocus={() => { if (results.length > 0) setOpen(true) }}
+        onFocus={() => { onInputFocus?.(); if (results.length > 0) setOpen(true) }}
         onKeyDown={handleKey}
         autoComplete="off"
         spellCheck={false}

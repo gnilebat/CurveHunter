@@ -1,4 +1,4 @@
-import type { RouteResult, RouteSegment, RouteOptions, SearchResult, Waypoint } from '../types'
+import type { RouteResult, AlternativeRoute, RouteSegment, RouteOptions, SearchResult, Waypoint } from '../types'
 
 const BASE = '/api'
 
@@ -30,7 +30,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
-interface RouteApiResponse {
+interface AltRouteApi {
   geometry: GeoJSON.LineString
   distance_m: number
   duration_s: number
@@ -50,6 +50,10 @@ interface RouteApiResponse {
   }[]
   ignored_urban: boolean
   max_speed_per_vertex: number[]
+}
+
+interface RouteApiResponse extends AltRouteApi {
+  alternatives: AltRouteApi[]
 }
 
 export interface RoundTripParams {
@@ -80,6 +84,13 @@ export async function fetchRoute(
         : {})
     })
   })
+  return {
+    ...toAltRoute(r),
+    alternatives: (r.alternatives ?? []).map(toAltRoute)
+  }
+}
+
+function toAltRoute(r: AltRouteApi): AlternativeRoute {
   const segments: RouteSegment[] = r.segments.map(s => ({
     coordinates: s.coordinates,
     score: s.score,

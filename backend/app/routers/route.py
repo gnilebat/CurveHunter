@@ -36,6 +36,7 @@ class RouteRequest(BaseModel):
     waypoints: list[WaypointIn] = Field(..., min_length=1)
     options: RouteOptions = RouteOptions()
     round_trip: RoundTripRequest | None = None
+    alternatives: bool = True  # ask GraphHopper for up to 2 extra paths
 
 
 class RouteSegment(BaseModel):
@@ -56,7 +57,7 @@ class Instruction(BaseModel):
     interval: list[int]
 
 
-class RouteResponse(BaseModel):
+class AlternativeRoute(BaseModel):
     geometry: dict
     distance_m: float
     duration_s: float
@@ -71,46 +72,18 @@ class RouteResponse(BaseModel):
     max_speed_per_vertex: list[int]
 
 
-@router.post("/route", response_model=RouteResponse)
-async def plan_route(req: RouteRequest):
-    if req.round_trip is None and len(req.waypoints) < 2:
-        raise HTTPException(
-            status_code=422,
-            detail="At least 2 waypoints required for point-to-point routing"
-        )
-    try:
-        gh = await graphhopper.route(
-            points=[(w.lat, w.lng) for w in req.waypoints],
-            curviness=req.options.curviness,
-            avoid_motorways=req.options.avoid_motorways,
-            avoid_trunks=req.options.avoid_trunks,
-            avoid_urban=req.options.avoid_urban,
-            ignore_urban_curves=req.options.ignore_urban_curves,
-            min_curve_speed=req.options.min_curve_speed,
-            avoid_unpaved=req.options.avoid_unpaved,
-            round_trip_distance_m=(
-                int(req.round_trip.distance_km * 1000) if req.round_trip else None
-            ),
-            round_trip_seed=req.round_trip.seed if req.round_trip else None
-        )
-    except RoutingRequestError as e:
-        raise HTTPException(
-            status_code=404,
-            detail={"message": e.message, "point_index": e.point_index}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
+class RouteResponse(AlternativeRoute):
+    alternatives: list[AlternativeRoute] = []
 
-    if not gh.get("paths"):
-        raise HTTPException(status_code=404, detail="No route found")
 
-    path = gh["paths"][0]
+def _process_path(path: dict, options: RouteOptions) -> dict:
+    """Turn a single GraphHopper path into the dict shape both
+    RouteResponse and AlternativeRoute expect."""
     coords = path["points"]["coordinates"]
     coords_2d = [[c[0], c[1]] for c in coords]
-
-    # Per-coordinate urban mask from GraphHopper details
     details = path.get("details", {})
     n = len(coords_2d)
+
     urban_mask = build_urban_mask(
         n_coords=n,
         road_class_ranges=details.get("road_class", []),
@@ -127,12 +100,11 @@ async def plan_route(req: RouteRequest):
     speed_below_mask = build_speed_below_mask(
         n_coords=n,
         max_speed_ranges=details.get("max_speed", []),
-        min_speed=req.options.min_curve_speed
+        min_speed=options.min_curve_speed
     )
 
-    # Combine score-filter masks: skip a vertex if EITHER filter applies
-    use_urban_filter = req.options.ignore_urban_curves
-    use_speed_filter = req.options.min_curve_speed > 0
+    use_urban_filter = options.ignore_urban_curves
+    use_speed_filter = options.min_curve_speed > 0
     skip_mask = None
     if use_urban_filter or use_speed_filter:
         skip_mask = [
@@ -146,7 +118,7 @@ async def plan_route(req: RouteRequest):
         window_m=500.0,
         urban_mask=urban_mask,
         highway_mask=highway_mask,
-        below_speed_mask=speed_below_mask if req.options.min_curve_speed > 0 else None
+        below_speed_mask=speed_below_mask if options.min_curve_speed > 0 else None
     )
 
     instructions = [
@@ -166,7 +138,7 @@ async def plan_route(req: RouteRequest):
         max_speed_ranges=details.get("max_speed", [])
     )
 
-    return RouteResponse(
+    return dict(
         geometry=path["points"],
         distance_m=path.get("distance", 0),
         duration_s=path.get("time", 0) / 1000,
@@ -177,6 +149,54 @@ async def plan_route(req: RouteRequest):
         curvature_score=round(score, 1),
         segments=[RouteSegment(**s) for s in segments],
         instructions=instructions,
-        ignored_urban=req.options.ignore_urban_curves,
+        ignored_urban=options.ignore_urban_curves,
         max_speed_per_vertex=max_speed_per_vertex
+    )
+
+
+@router.post("/route", response_model=RouteResponse)
+async def plan_route(req: RouteRequest):
+    if req.round_trip is None and len(req.waypoints) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail="At least 2 waypoints required for point-to-point routing"
+        )
+    # GraphHopper's alternative_route algorithm only supports exactly 2 points
+    # (start + end). With via points it would error 400, so silently skip.
+    want_alternatives = req.alternatives and req.round_trip is None and len(req.waypoints) == 2
+
+    try:
+        gh = await graphhopper.route(
+            points=[(w.lat, w.lng) for w in req.waypoints],
+            curviness=req.options.curviness,
+            avoid_motorways=req.options.avoid_motorways,
+            avoid_trunks=req.options.avoid_trunks,
+            avoid_urban=req.options.avoid_urban,
+            ignore_urban_curves=req.options.ignore_urban_curves,
+            min_curve_speed=req.options.min_curve_speed,
+            avoid_unpaved=req.options.avoid_unpaved,
+            round_trip_distance_m=(
+                int(req.round_trip.distance_km * 1000) if req.round_trip else None
+            ),
+            round_trip_seed=req.round_trip.seed if req.round_trip else None,
+            request_alternatives=want_alternatives
+        )
+    except RoutingRequestError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": e.message, "point_index": e.point_index}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Routing engine error: {e}")
+
+    paths = gh.get("paths") or []
+    if not paths:
+        raise HTTPException(status_code=404, detail="No route found")
+
+    primary = _process_path(paths[0], req.options)
+    alternatives = [_process_path(p, req.options) for p in paths[1:]]
+
+    return RouteResponse(
+        **primary,
+        alternatives=[AlternativeRoute(**a) for a in alternatives]
     )

@@ -17,7 +17,7 @@ import { useSavedPlaces, type SavedPlace } from './hooks/useSavedPlaces'
 import { useTTS } from './tts/useTTS'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
-import { routeToGpx, downloadGpx, defaultGpxFilename } from './lib/gpx'
+import { routeToGpx, downloadGpx, defaultGpxFilename, parseGpx } from './lib/gpx'
 import type { Waypoint, RouteOptions } from './types'
 import './App.css'
 
@@ -51,6 +51,7 @@ export default function App() {
     waypoints, route, loading, error, options, roundTrip,
     setWaypoint, insertWaypointAfter, removeWaypoint,
     setOption, setOptions, setRoundTrip, reshuffleRoundTrip,
+    selectAlternative,
     swap, clearAll, loadRoute, prependWaypoint, insertWaypointAt, retry
   } = useRoute()
 
@@ -80,6 +81,12 @@ export default function App() {
   const savedRoutes = useSavedRoutes()
   const customPresets = useCustomPresets()
   const savedPlaces = useSavedPlaces()
+
+  // Which waypoint input is currently "armed" — i.e. the one a map click
+  // will populate. Starts at 0 (start) on load. Advances to the next empty
+  // slot after each fill; goes to null once all slots are filled, so an
+  // accidental map click can't move endpoints.
+  const [activeIdx, setActiveIdx] = useState<number | null>(0)
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingSave, setPendingSave] = useState<
@@ -113,6 +120,19 @@ export default function App() {
   const handleSavePreset = useCallback(() => {
     setPendingSave({ kind: 'preset' })
   }, [])
+
+  const handleImportGpx = useCallback(async (file: File) => {
+    try {
+      const text = await file.text()
+      const wps = parseGpx(text)
+      loadRoute(wps, options)
+    } catch (e) {
+      // Surface the error via the existing route-error channel by faking
+      // an ApiError-like message wouldn't be clean — for now, alert.
+      // eslint-disable-next-line no-alert
+      alert((e as Error).message || 'GPX import failed')
+    }
+  }, [loadRoute, options])
 
   const handleExportGpx = useCallback(() => {
     if (!route) return
@@ -195,17 +215,38 @@ export default function App() {
     }
   }, [debugNav, nav.active, debug.pos])
 
+  // When navigation stops, pause and rewind the debug simulator so it
+  // doesn't keep advancing in the background (which was also feeding stale
+  // off-route cues to TTS).
+  useEffect(() => {
+    if (!nav.active && debugNav) {
+      debug.setPlaying(false)
+      debug.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.active])
+
+  // Wrapper around setWaypoint that also advances the "armed" input to the
+  // next empty slot after a successful fill, and re-arms the cleared slot on
+  // clear. Used everywhere a waypoint changes (search pick, map click, drag).
+  const setWaypointAndAdvance = useCallback((idx: number, wp: Waypoint | null) => {
+    setWaypoint(idx, wp)
+    if (wp === null) {
+      setActiveIdx(idx)
+      return
+    }
+    const nextEmpty = waypoints.findIndex((w, i) => i > idx && w === null)
+    setActiveIdx(nextEmpty === -1 ? null : nextEmpty)
+  }, [setWaypoint, waypoints])
+
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (nav.active) return
+    // Only fill a waypoint when one is explicitly armed. Otherwise the map
+    // click is ignored so the user can pan freely without disturbing pins.
+    if (activeIdx === null || activeIdx < 0 || activeIdx >= waypoints.length) return
     const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-    const wp: Waypoint = { lat, lng, name }
-    const emptyIdx = waypoints.findIndex(w => w === null)
-    if (emptyIdx >= 0) {
-      setWaypoint(emptyIdx, wp)
-    } else {
-      setWaypoint(waypoints.length - 1, wp)
-    }
-  }, [nav.active, waypoints, setWaypoint])
+    setWaypointAndAdvance(activeIdx, { lat, lng, name })
+  }, [nav.active, activeIdx, waypoints, setWaypointAndAdvance])
 
   const handleRouteDragInsert = useCallback((insertIdx: number, lat: number, lng: number) => {
     const name = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
@@ -240,13 +281,13 @@ export default function App() {
           loading={loading}
           error={error}
           options={options}
-          onWaypointChange={setWaypoint}
+          onWaypointChange={setWaypointAndAdvance}
           onInsertAfter={insertWaypointAfter}
           onRemove={removeWaypoint}
           onOptionChange={setOption}
           onOptionsApply={setOptions}
           onSwap={swap}
-          onClear={clearAll}
+          onClear={() => { clearAll(); setActiveIdx(0) }}
           onRetry={retry}
           onStartNavigation={nav.start}
           anyWaypointSet={anyWaypointSet}
@@ -268,6 +309,9 @@ export default function App() {
           onToggleRoundTrip={(on) => setRoundTrip({ enabled: on })}
           onRoundTripDistance={(km) => setRoundTrip({ distanceKm: km })}
           onReshuffleRoundTrip={reshuffleRoundTrip}
+          onImportGpx={handleImportGpx}
+          activeIdx={activeIdx}
+          onSetActiveIdx={setActiveIdx}
         />
       )}
       <div className="map-wrap">
@@ -277,6 +321,7 @@ export default function App() {
           onMapClick={handleMapClick}
           onWaypointDragEnd={nav.active ? undefined : handleWaypointDragEnd}
           onRouteDragInsert={nav.active ? undefined : handleRouteDragInsert}
+          onAlternativeSelect={nav.active ? undefined : selectAlternative}
           followUser={nav.active}
           userPos={nav.userPos}
           dimUrbanSegments={options.ignoreUrbanCurves}

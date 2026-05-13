@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { ApiError, fetchRoute, type RoundTripParams } from '../api/client'
 import { DEFAULT_ROUTE_OPTIONS } from '../types'
-import type { Waypoint, RouteResult, RouteOptions } from '../types'
+import type { Waypoint, RouteResult, RouteOptions, AlternativeRoute } from '../types'
 
 const ROUTE_DEBOUNCE_MS = 450
 
@@ -151,6 +151,35 @@ export function useRoute() {
     if (allSet) planRoute(waypoints as Waypoint[], options)
   }, [waypoints, options, roundTrip, planRoute])
 
+  // Swap a saved alternative into the primary slot, demoting the current
+  // primary to the alternatives array. Pure state swap — does not refetch.
+  const selectAlternative = useCallback((idx: number) => {
+    setRoute(prev => {
+      if (!prev) return prev
+      if (idx < 0 || idx >= prev.alternatives.length) return prev
+      const chosen = prev.alternatives[idx]
+      const demoted: AlternativeRoute = {
+        geometry: prev.geometry,
+        distanceM: prev.distanceM,
+        durationS: prev.durationS,
+        ascentM: prev.ascentM,
+        descentM: prev.descentM,
+        motorwayM: prev.motorwayM,
+        trunkM: prev.trunkM,
+        curvatureScore: prev.curvatureScore,
+        segments: prev.segments,
+        instructions: prev.instructions,
+        maxSpeedPerVertex: prev.maxSpeedPerVertex
+      }
+      const newAlts = [
+        ...prev.alternatives.slice(0, idx),
+        demoted,
+        ...prev.alternatives.slice(idx + 1)
+      ]
+      return { ...chosen, alternatives: newAlts }
+    })
+  }, [])
+
   const setRoundTrip = useCallback((rt: Partial<RoundTripState>) => {
     setRoundTripState(prev => ({ ...prev, ...rt }))
   }, [])
@@ -165,6 +194,7 @@ export function useRoute() {
     insertWaypointBefore, insertWaypointAfter, removeWaypoint,
     setOption, setOptions,
     setRoundTrip, reshuffleRoundTrip,
+    selectAlternative,
     swap, clearAll, loadRoute, prependWaypoint, insertWaypointAt, retry
   }
 }

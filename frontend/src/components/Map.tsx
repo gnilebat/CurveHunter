@@ -43,6 +43,8 @@ interface Props {
   /** Fires when the user drags the route polyline and drops it — adds a new
       via waypoint at the insertion index. */
   onRouteDragInsert?: (insertIdx: number, lat: number, lng: number) => void
+  /** Fires when the user clicks an alternative route polyline. */
+  onAlternativeSelect?: (idx: number) => void
   followUser?: boolean
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
@@ -96,6 +98,7 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
 
 export function Map({
   waypoints, route, onMapClick, onWaypointDragEnd, onRouteDragInsert,
+  onAlternativeSelect,
   followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
   bottomInset = 0
@@ -105,6 +108,7 @@ export function Map({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const waypointMarkers = useRef<maplibregl.Marker[]>([])
+  const altBadges = useRef<maplibregl.Marker[]>([])
   const userMarker = useRef<maplibregl.Marker | null>(null)
   const userArrow = useRef<HTMLElement | null>(null)
 
@@ -123,6 +127,23 @@ export function Map({
     }), 'top-right')
 
     map.on('load', () => {
+      // Alternatives go FIRST so the active route stacks visually on top.
+      map.addSource('alts', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      })
+      map.addLayer({
+        id: 'alt-line',
+        type: 'line',
+        source: 'alts',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#64748b',
+          'line-width': 4,
+          'line-opacity': 0.55
+        }
+      })
+
       map.addSource('route', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] }
@@ -195,6 +216,17 @@ export function Map({
     map.setStyle(buildMapStyle(locale, theme))
     map.once('style.load', () => {
       if (map.getSource('route')) return
+      map.addSource('alts', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      })
+      map.addLayer({
+        id: 'alt-line',
+        type: 'line',
+        source: 'alts',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#64748b', 'line-width': 4, 'line-opacity': 0.55 }
+      })
       map.addSource('route', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] }
@@ -228,10 +260,11 @@ export function Map({
     const map = mapRef.current
     if (!map || !onMapClick) return
     const handler = (e: maplibregl.MapMouseEvent) => {
-      // Suppress clicks on the route line — those are handled by the
-      // drag-to-add-via gesture below.
-      if (map.getLayer('route-line')) {
-        const hits = map.queryRenderedFeatures(e.point, { layers: ['route-line'] })
+      // Suppress clicks on the route line or alternative lines — those are
+      // handled by the drag-to-add-via and select-alternative gestures.
+      const layers = ['route-line', 'alt-line'].filter(l => map.getLayer(l))
+      if (layers.length) {
+        const hits = map.queryRenderedFeatures(e.point, { layers })
         if (hits.length > 0) return
       }
       onMapClick(e.lngLat.lat, e.lngLat.lng)
@@ -262,11 +295,16 @@ export function Map({
     })
 
     let dragging = false
+    let moved = false           // tracks whether the gesture qualifies as a drag
+    let startPoint: maplibregl.Point | null = null
     let draft: maplibregl.Marker | null = null
     const canvas = map.getCanvas()
+    const DRAG_THRESHOLD_PX = 6
 
     const cleanup = () => {
       dragging = false
+      moved = false
+      startPoint = null
       map.dragPan.enable()
       canvas.style.cursor = ''
       if (draft) { draft.remove(); draft = null }
@@ -276,31 +314,56 @@ export function Map({
     const onLineLeave = () => { if (!dragging) canvas.style.cursor = '' }
 
     const onLineDown = (e: maplibregl.MapMouseEvent) => {
+      // If the underlying DOM target is a marker, the user is grabbing a
+      // waypoint pin, not the line. MapLibre fires layer-mousedown for both
+      // because the marker overlaps the line visually; we must not start a
+      // parallel route-drag gesture or we'd insert a phantom via on release.
+      const target = e.originalEvent.target as HTMLElement | null
+      if (target && target.closest('.maplibregl-marker')) return
+
       e.preventDefault()
       dragging = true
+      moved = false
+      startPoint = e.point
       map.dragPan.disable()
-      canvas.style.cursor = 'grabbing'
-
-      const el = document.createElement('div')
-      el.style.cssText =
-        'width:16px;height:16px;border-radius:50%;' +
-        'background:#3b82f6;border:3px solid #fff;' +
-        'box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 4px 10px rgba(0,0,0,.4);' +
-        'pointer-events:none;'
-      draft = new maplibregl.Marker({ element: el })
-        .setLngLat(e.lngLat)
-        .addTo(map)
+      // Don't show the drag cursor yet — only flip to 'grabbing' once the user
+      // actually moves. Pure clicks stay as the regular pointer.
     }
 
     const onMove = (e: maplibregl.MapMouseEvent) => {
-      if (!dragging || !draft) return
-      draft.setLngLat(e.lngLat)
+      if (!dragging) return
+      if (!moved && startPoint) {
+        const dx = e.point.x - startPoint.x
+        const dy = e.point.y - startPoint.y
+        if (Math.abs(dx) < DRAG_THRESHOLD_PX && Math.abs(dy) < DRAG_THRESHOLD_PX) return
+        moved = true
+        canvas.style.cursor = 'grabbing'
+        // Spawn the draft marker only now that we know it's a real drag.
+        const el = document.createElement('div')
+        el.style.cssText =
+          'width:16px;height:16px;border-radius:50%;' +
+          'background:#3b82f6;border:3px solid #fff;' +
+          'box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 4px 10px rgba(0,0,0,.4);' +
+          'pointer-events:none;'
+        draft = new maplibregl.Marker({ element: el })
+          .setLngLat(e.lngLat)
+          .addTo(map)
+      }
+      if (moved && draft) draft.setLngLat(e.lngLat)
     }
 
     const onUp = (e: maplibregl.MapMouseEvent) => {
       if (!dragging) return
       const lng = e.lngLat.lng, lat = e.lngLat.lat
+      const wasDrag = moved
       cleanup()
+
+      if (!wasDrag) {
+        // Pure click on the route line — fall through to the normal map click
+        // handler so the armed waypoint input gets filled at this point.
+        onMapClick?.(lat, lng)
+        return
+      }
 
       // Snap drop to the closest vertex on the route polyline.
       let dropIdx = 0, bestD = Infinity
@@ -338,7 +401,7 @@ export function Map({
       map.off('mouseup', onUp)
       cleanup()
     }
-  }, [route, waypoints, onRouteDragInsert, followUser])
+  }, [route, waypoints, onRouteDragInsert, onMapClick, followUser])
 
   useEffect(() => {
     const map = mapRef.current
@@ -400,19 +463,41 @@ export function Map({
     if (!map) return
     const apply = () => {
       const source = map.getSource('route') as maplibregl.GeoJSONSource | undefined
+      const altSource = map.getSource('alts') as maplibregl.GeoJSONSource | undefined
       if (!source) return
       if (!route) {
         source.setData({ type: 'FeatureCollection', features: [] })
+        altSource?.setData({ type: 'FeatureCollection', features: [] })
         return
       }
       source.setData(buildRouteData(route))
 
+      // Feed alternative paths into the 'alts' source so they render as
+      // muted lines below the primary route. Each carries its altIdx prop
+      // so the click handler can swap it in.
+      if (altSource) {
+        altSource.setData({
+          type: 'FeatureCollection',
+          features: route.alternatives.map((a, i) => ({
+            type: 'Feature',
+            properties: { altIdx: i },
+            geometry: a.geometry
+          }))
+        })
+      }
+
       const coords = route.geometry.coordinates as [number, number][]
       if (coords.length > 0) {
+        // Include alternatives in the fit bounds so they're all visible.
         const bounds = coords.reduce(
           (b, c) => b.extend(c as maplibregl.LngLatLike),
           new maplibregl.LngLatBounds(coords[0], coords[0])
         )
+        for (const a of route.alternatives) {
+          for (const c of a.geometry.coordinates as number[][]) {
+            bounds.extend([c[0], c[1]] as maplibregl.LngLatLike)
+          }
+        }
         map.fitBounds(bounds, {
           padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
           maxZoom: 14
@@ -423,6 +508,86 @@ export function Map({
     else map.once('load', apply)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route])
+
+  // Click on an alternative line → swap it into the primary slot. We
+  // intentionally skip mouseenter/mouseleave here — the floating alt badge
+  // already signals clickability, and per-layer hover handlers force
+  // MapLibre to hit-test these long polylines on every mousemove which
+  // makes map panning visibly laggy.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !onAlternativeSelect) return
+    const onAltClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
+      const f = e.features?.[0]
+      if (!f) return
+      const idx = (f.properties as { altIdx?: number })?.altIdx
+      if (typeof idx === 'number') onAlternativeSelect(idx)
+    }
+    map.on('click', 'alt-line', onAltClick)
+    return () => {
+      map.off('click', 'alt-line', onAltClick)
+    }
+  }, [onAlternativeSelect])
+
+  // Floating clickable badge near the midpoint of each alternative route —
+  // easier hit target than the thin line, plus shows distance + time delta
+  // so the user can compare candidates at a glance.
+  useEffect(() => {
+    const map = mapRef.current
+    altBadges.current.forEach(m => m.remove())
+    altBadges.current = []
+    if (!map || !route || !onAlternativeSelect) return
+
+    route.alternatives.forEach((alt, idx) => {
+      const coords = alt.geometry.coordinates as number[][]
+      if (coords.length === 0) return
+      // Midpoint by array index — good enough visually; cheaper than length-weighted.
+      const midIdx = Math.floor(coords.length / 2)
+      const [lng, lat] = coords[midIdx]
+
+      const distKm = Math.round(alt.distanceM / 1000)
+      const dtMin = Math.round((alt.durationS - route.durationS) / 60)
+      const dtStr = dtMin === 0 ? '' : dtMin > 0 ? ` · +${dtMin} min` : ` · ${dtMin} min`
+
+      // Outer element is owned by MapLibre — its CSS transform is used to
+      // pin the marker to the map. We must NOT touch its transform; hover
+      // effects go on the inner chip.
+      const root = document.createElement('div')
+      const chip = document.createElement('div')
+      chip.style.cssText =
+        'background:var(--bg,#fff);' +
+        'border:2px solid var(--secondary,#3b82f6);' +
+        'border-radius:16px;' +
+        'padding:4px 10px;' +
+        'font:600 11px/1.3 system-ui,sans-serif;' +
+        'color:var(--text,#111);' +
+        'cursor:pointer;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,.25);' +
+        'white-space:nowrap;' +
+        'user-select:none;' +
+        'transition:transform 0.12s, box-shadow 0.12s;' +
+        'transform-origin:center;'
+      chip.textContent = `${distKm} km${dtStr}`
+      chip.addEventListener('mouseenter', () => {
+        chip.style.transform = 'scale(1.08)'
+        chip.style.boxShadow = '0 4px 14px rgba(37,99,235,0.35)'
+      })
+      chip.addEventListener('mouseleave', () => {
+        chip.style.transform = ''
+        chip.style.boxShadow = '0 2px 8px rgba(0,0,0,.25)'
+      })
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation()
+        onAlternativeSelect(idx)
+      })
+      root.appendChild(chip)
+
+      const marker = new maplibregl.Marker({ element: root })
+        .setLngLat([lng, lat])
+        .addTo(map)
+      altBadges.current.push(marker)
+    })
+  }, [route, onAlternativeSelect])
 
   // When the bottom UI panel resizes, gently pan the map upward by half the
   // height change so the visible-area centre stays roughly steady. No zoom
@@ -497,5 +662,54 @@ export function Map({
     map.easeTo({ pitch: 0, bearing: 0, duration: 500 })
   }, [followUser])
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+  const recentre = () => {
+    const m = mapRef.current
+    if (!m || !userPos) return
+    m.easeTo({
+      center: [userPos.lng, userPos.lat],
+      zoom: 16,
+      pitch: 50,
+      bearing: userPos.heading ?? 0,
+      duration: 500
+    })
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {followUser && userPos && (
+        <button
+          onClick={recentre}
+          aria-label="Recentre on me"
+          title="Recentre"
+          style={{
+            position: 'absolute',
+            right: 16,
+            bottom: 96,
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            border: 'none',
+            background: 'linear-gradient(135deg, var(--secondary), var(--secondary-hover))',
+            color: '#fff',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(77, 124, 223, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 25
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="12" r="8" />
+            <line x1="12" y1="2" x2="12" y2="5" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="5" y2="12" />
+            <line x1="19" y1="12" x2="22" y2="12" />
+          </svg>
+        </button>
+      )}
+    </div>
+  )
 }

@@ -174,6 +174,10 @@ Built on top of the core, mostly without backend changes. **Status as of the cur
 - **Round-trip / curvy loop generator** — pick a start + distance (10–300 km), get a closed loop. Uses GraphHopper's `round_trip` algorithm on the `motorcycle_curvy` profile, with a shuffle button for alternate seeds.
 - **Elevation profile chart** under the route stats — SVG line+area from the 3rd ordinate of `route.geometry`; shows ascent/descent + min/max elevation.
 - **Speed-limit overlay** during navigation — red-ring badge with the current edge's `max_speed`; pulses when the rider is more than 5 km/h over.
+- **Drag the route line to add a via point** — grab the polyline anywhere with mouse / touch, drop to insert a new via at that position. Snaps to the closest route vertex; insertion index computed by which leg the drop falls in. Cursor shows `pointer` on hover, `grabbing` during drag.
+- **Route alternatives** — GraphHopper's `algorithm=alternative_route` returns up to two extra paths alongside the primary. Alternatives render as muted blue-gray lines under the active route; click one to swap it in. Camera fit-bounds includes alternatives so all candidates stay visible.
+- **GPX import** — drop a `.gpx` file via the upload icon next to the A→B / Rundkurs toggle. Parser prefers `<rtept>` → `<wpt>` → first+last `<trkpt>` as waypoint source; applies atomically via `loadRoute()`.
+- **"Recentre" floating button** during nav — blue circular button in the bottom-right of the map. `easeTo(userPos, zoom 16, pitch 50)` snaps the camera back after manual panning.
 
 ### Top of the backlog
 Sorted by impact / effort:
@@ -181,20 +185,11 @@ Sorted by impact / effort:
 | Idea | Why | Notes |
 |---|---|---|
 | **🔴 High priority — Data refresh / update pipeline** | All three datasets (PMTiles, GraphHopper graph, Photon index) currently freeze at their initial download date. After a few months OSM data drifts, new roads / closed roads are wrong. Need an investigation + implementation of a refresh strategy so the app stays current without manual rebuilds. | Three pieces to investigate: 1) **PMTiles** — re-download `map.pmtiles` periodically (monthly?) from a self-built tile generator (`tilemaker`) or Protomaps. 2) **GraphHopper** — automate `docker compose down graphhopper`, wipe `graphhopper-cache`, drop a fresh Geofabrik PBF, `up` again to re-import. 3) **Photon** — re-download the planet/country tarball and replace the bind-mounted folder. Schedule via cron / systemd timer / a tiny "refresh-job" Docker service. Open questions: rolling reload without downtime, atomic swap of vhdx data, OSM diff-replication option (vs. full re-import). |
-| **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | ✅ shipped — see Done list |
-| **Route alternatives (2–3 candidates)** | "Curviest" optimisation often misses obvious good roads | GraphHopper `algorithm=alternative_route` |
 | **Share route via URL** | Default expectation for any modern route planner | Encode waypoints + options in query string |
-| **Drag the route line to add a via point** (Google Maps style) | Existing waypoint drag covers pins only | New gesture: click + drag on the route layer |
-| **GPX import** | Round-trip with friends, Calimoto / Kurviger exchange | Parse `.gpx`, set waypoints + apply track as user-fixed path |
 | **Reverse whole sequence** | Current swap only flips start ↔ end | One-liner in `useRoute` |
 | **Recently used places** auto-history | Pair with saved-places UI | Capped list under a new key |
 | **PWA install prompt + service worker** | Offline shell + "Add to home screen" | `vite-plugin-pwa`, ~30 min |
-| **Speed-camera (Blitzer) overlay & voice alert** | Critical for riders in DE/AT — pre-warn at known fixed speed-cam locations | OSM `highway=speed_camera` nodes are public-domain; ingest into PostGIS, alert when within ~200 m and approaching. Note: mobile/temporary cameras aren't in OSM — would need an external feed |
-| **"Recentre" floating button** during nav | If the user pans away from their position | One button + `easeTo` to user pos |
-| **Pre-departure summary screen** | "212 km · 87 % Landstraße · 3 Pässe" before pressing Start | Aggregates existing route metadata |
 | **Curvature heatmap layer** on the bare map | Passive discovery of fun roads | Built once Phase 2 ETL fills PostGIS |
-| **Riding-mode preset family** (Touring / Sport / Adventure / Off-road) | Apply coherent option bundles, less slider fiddling | Extends `ROUTE_PRESETS` |
-| **Day/night basemap auto-switch** by local sunset | Theming exists, just gate on time | `SunCalc` lib or simple latitude/time approx |
 | **Native Android wrap via Capacitor** | Background voice + Play Store presence | Same React code; switch when PWA limits bite |
 | **Piper TTS engine** (offline, neural) | Better German voices on devices with poor system TTS | Engine interface already in place at `src/tts/engines.ts` |
 

@@ -95,7 +95,7 @@ export interface Instruction {
   interval: [number, number]
 }
 
-export interface RouteResult {
+export interface AlternativeRoute {
   geometry: GeoJSON.LineString
   distanceM: number
   durationS: number
@@ -107,6 +107,10 @@ export interface RouteResult {
   segments: RouteSegment[]
   instructions: Instruction[]
   maxSpeedPerVertex: number[]
+}
+
+export interface RouteResult extends AlternativeRoute {
+  alternatives: AlternativeRoute[]
 }
 
 export interface SearchResult {

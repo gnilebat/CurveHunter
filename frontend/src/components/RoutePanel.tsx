@@ -55,6 +55,11 @@ interface Props {
   onToggleRoundTrip: (on: boolean) => void
   onRoundTripDistance: (km: number) => void
   onReshuffleRoundTrip: () => void
+
+  onImportGpx: (file: File) => void
+
+  activeIdx: number | null
+  onSetActiveIdx: (idx: number | null) => void
 }
 
 const PRESET_LABEL_KEY: Record<PresetId, string> = {
@@ -101,7 +106,9 @@ export function RoutePanel({
   onOpenMenu, onSavePlace, onSaveRoute, onSavePreset, onExportGpx,
   panelHeight, onPanelHeightChange,
   roundTripEnabled, roundTripDistanceKm,
-  onToggleRoundTrip, onRoundTripDistance, onReshuffleRoundTrip
+  onToggleRoundTrip, onRoundTripDistance, onReshuffleRoundTrip,
+  onImportGpx,
+  activeIdx, onSetActiveIdx
 }: Props) {
   const activePreset = matchPreset(options)
   const { t, locale, setLocale } = useLocale()
@@ -114,6 +121,7 @@ export function RoutePanel({
   useEffect(() => { if (isMobile) setOptionsOpen(false) }, [isMobile])
 
   const dragState = useRef({ startY: 0, startH: 0, dragging: false })
+  const gpxInputRef = useRef<HTMLInputElement>(null)
   function onHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!isMobile) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -234,6 +242,29 @@ export function RoutePanel({
           aria-pressed={roundTripEnabled}
           role="tab"
         >{t('panel.modeRoundTrip')}</button>
+        <input
+          ref={gpxInputRef}
+          type="file"
+          accept=".gpx,application/gpx+xml,text/xml"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) onImportGpx(f)
+            e.target.value = ''  // allow re-picking the same file
+          }}
+          style={{ display: 'none' }}
+        />
+        <button
+          className={styles.modeImportBtn}
+          onClick={() => gpxInputRef.current?.click()}
+          title={t('panel.importGpx')}
+          aria-label={t('panel.importGpx')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </button>
       </div>
 
       <div className={styles.inputsBlock}>
@@ -252,6 +283,8 @@ export function RoutePanel({
                   isSelected={wp !== null}
                   onChange={(r) => onWaypointChange(idx, toWaypoint(r))}
                   onClear={() => onWaypointChange(idx, null)}
+                  shouldFocus={activeIdx === idx}
+                  onInputFocus={() => onSetActiveIdx(idx)}
                 />
                 {isFirst ? (
                   <>

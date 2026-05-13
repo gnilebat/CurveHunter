@@ -42,13 +42,44 @@ function haversineM(a: [number, number], b: [number, number]): number {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-// Returns { idx, distM } for the closest route vertex to a point.
-function closestVertex(coords: number[][], pt: [number, number]) {
+// Returns { idx, distM } for the closest point on the route polyline to the
+// given point — measured against segments, not just vertices, so we don't
+// false-positive off-route when the user is between sparse vertices.
+function closestOnRoute(coords: number[][], pt: [number, number]) {
+  if (coords.length === 0) return { idx: 0, distM: Infinity }
+  if (coords.length === 1) {
+    return { idx: 0, distM: haversineM([coords[0][0], coords[0][1]], pt) }
+  }
+  // Equirectangular projection around the query latitude — accurate enough
+  // for cross-track distance over short route segments (< few km).
+  const latRef = pt[1]
+  const cosLat = Math.cos((latRef * Math.PI) / 180)
+  const R = 6_371_000
+  const toRad = (x: number) => (x * Math.PI) / 180
+  const proj = (lng: number, lat: number): [number, number] => [
+    R * toRad(lng) * cosLat,
+    R * toRad(lat)
+  ]
+  const [px, py] = proj(pt[0], pt[1])
+
   let bestIdx = 0
   let bestDist = Infinity
-  for (let i = 0; i < coords.length; i++) {
-    const d = haversineM([coords[i][0], coords[i][1]], pt)
-    if (d < bestDist) { bestDist = d; bestIdx = i }
+  for (let i = 0; i < coords.length - 1; i++) {
+    const [ax, ay] = proj(coords[i][0], coords[i][1])
+    const [bx, by] = proj(coords[i + 1][0], coords[i + 1][1])
+    const dx = bx - ax, dy = by - ay
+    const len2 = dx * dx + dy * dy
+    let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0
+    if (t < 0) t = 0
+    else if (t > 1) t = 1
+    const fx = ax + t * dx, fy = ay + t * dy
+    const d = Math.hypot(px - fx, py - fy)
+    if (d < bestDist) {
+      bestDist = d
+      // Use the closer endpoint as the reference vertex index for downstream
+      // instruction/segment lookups.
+      bestIdx = t < 0.5 ? i : i + 1
+    }
   }
   return { idx: bestIdx, distM: bestDist }
 }
@@ -123,7 +154,7 @@ export function useNavigation(
     }
 
     const coords = route.geometry.coordinates as number[][]
-    const { idx, distM } = closestVertex(coords, [userPos.lng, userPos.lat])
+    const { idx, distM } = closestOnRoute(coords, [userPos.lng, userPos.lat])
     const offRoute = distM > OFF_ROUTE_THRESHOLD_M
 
     // Find the instruction whose interval contains the closest vertex
