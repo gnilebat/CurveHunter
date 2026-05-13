@@ -132,8 +132,17 @@ export function NavOverlay({
       aria-pressed={simulateOpen}
       style={simulateOpen ? { color: 'var(--accent)' } : undefined}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polygon points="5 3 19 12 5 21 5 3" fill={simulateOpen ? 'currentColor' : 'none'} />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {/* Antenna */}
+        <line x1="12" y1="2" x2="12" y2="5" />
+        <circle cx="12" cy="2" r="1" fill="currentColor" stroke="none" />
+        {/* Head */}
+        <rect x="4" y="6" width="16" height="13" rx="3" fill={simulateOpen ? 'currentColor' : 'none'} stroke="currentColor" />
+        {/* Eyes */}
+        <circle cx="9" cy="12" r="1.2" fill={simulateOpen ? 'var(--bg)' : 'currentColor'} stroke="none" />
+        <circle cx="15" cy="12" r="1.2" fill={simulateOpen ? 'var(--bg)' : 'currentColor'} stroke="none" />
+        {/* Mouth */}
+        <line x1="9" y1="16" x2="15" y2="16" stroke={simulateOpen ? 'var(--bg)' : 'currentColor'} />
       </svg>
     </button>
   )

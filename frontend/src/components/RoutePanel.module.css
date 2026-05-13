@@ -47,25 +47,35 @@
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   box-shadow: 0 -10px 28px var(--shadow-strong);
-  padding-top: 28px;            /* room for the grab handle */
+  /* No padding-top — the sticky drag handle occupies the first 28px in flow. */
+  padding-top: 0;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 20;
-  /* The handle is always reachable; the rest of the content scrolls. */
 }
 
+/* Sticky so the handle stays visible while the rest of the panel scrolls.
+   Background matches the sheet so content scrolling underneath doesn't bleed
+   through. Negative horizontal margins counter the sheet's own padding so
+   the handle visually spans the full sheet width. */
 .dragHandle {
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
+  z-index: 5;
+  margin: -16px -16px 4px;  /* cancel sheet padding (16px) — see .panel */
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: ns-resize;
-  touch-action: none;            /* don't let the browser hijack vertical drag */
+  touch-action: none;
   user-select: none;
-  z-index: 2;
+  background: var(--bg);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+@media (max-height: 720px) {
+  .dragHandle { margin: -12px -12px 4px; }
 }
 
 .dragGrip {

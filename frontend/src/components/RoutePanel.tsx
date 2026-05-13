@@ -266,6 +266,15 @@ export function RoutePanel({
 
       <div className={styles.inputsBlock}>
         <div className={styles.startActionsRow}>
+          {!roundTripEnabled && (
+            <button
+              className={styles.iconBtn}
+              onClick={onSwap}
+              disabled={!anyWaypointSet}
+              title={t('panel.swap')}
+              aria-label={t('panel.swap')}
+            >⇅</button>
+          )}
           <button
             className={styles.iconBtn}
             title={t('panel.useMyLocation')}
@@ -337,15 +346,6 @@ export function RoutePanel({
             </Fragment>
           )
         })}
-        {!roundTripEnabled && (
-          <button
-            className={styles.swapBtn}
-            onClick={onSwap}
-            disabled={!anyWaypointSet}
-            title={t('panel.swap')}
-            aria-label={t('panel.swap')}
-          >⇅</button>
-        )}
       </div>
 
       {roundTripEnabled && (

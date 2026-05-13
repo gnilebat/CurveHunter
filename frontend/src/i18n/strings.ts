@@ -90,7 +90,7 @@ export const strings = {
     },
     pwa: {
       title: 'Schräglage installieren',
-      body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff und Offline-Nutzung.',
+      body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff.',
       install: 'Installieren',
       dismiss: 'Später'
     },
@@ -275,7 +275,7 @@ export const strings = {
     },
     pwa: {
       title: 'Install Schräglage',
-      body: 'Add the app to your home screen for quick access and offline use.',
+      body: 'Add the app to your home screen for quick access.',
       install: 'Install',
       dismiss: 'Later'
     },

@@ -110,7 +110,12 @@
       "Bash(curl -sI -m 15 'https://download1.graphhopper.com/public/extracts/by-country-code/de/photon-db-de-1.0-latest.tar.bz2')",
       "Bash(curl -sS -X POST https://ntfy.sh/schraeglage-Ag0Be5IXE1HCC54INB -H 'Title: Photon download' -H 'Content-Type: text/plain' --data-raw '10% — 5.8 / 56.5 GB')",
       "Bash(curl -sS -X POST https://ntfy.sh/schraeglage-Ag0Be5IXE1HCC54INB -H 'Title: Schraeglage' -H 'Content-Type: text/plain' --data-raw 'Plain text confirmed. Future milestones land inline like this.')",
-      "Bash(curl -sS -X POST https://ntfy.sh/ -H 'Content-Type: application/json' --data-raw '{\"topic\":\"schraeglage-Ag0Be5IXE1HCC54INB\",\"title\":\"Schraeglage\",\"message\":\"JSON API test — should appear as inline notification\"}')"
+      "Bash(curl -sS -X POST https://ntfy.sh/ -H 'Content-Type: application/json' --data-raw '{\"topic\":\"schraeglage-Ag0Be5IXE1HCC54INB\",\"title\":\"Schraeglage\",\"message\":\"JSON API test — should appear as inline notification\"}')",
+      "Bash(npm exec *)",
+      "PowerShell(cloudflared --version)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Packages\" -Recurse -Filter cloudflared.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\cloudflared\\\\\",\"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue)",
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" tunnel --url https://localhost:4173 --no-tls-verify 2>&1)"
     ]
   }
 }

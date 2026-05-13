@@ -158,6 +158,19 @@ function installRouteLayers(map: maplibregl.Map): void {
       }
     })
   }
+  // Wide transparent hit-target layer on top of the visible line. The visible
+  // line is only 5 px wide, which is far too narrow for a fingertip — this
+  // 24-px-wide layer gives touch users a realistic grab area for the
+  // drag-to-insert-via gesture. Fully transparent so it has no visual effect.
+  if (!map.getLayer('route-hit')) {
+    map.addLayer({
+      id: 'route-hit',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#000', 'line-opacity': 0, 'line-width': 24 }
+    })
+  }
 }
 
 export function Map({
@@ -249,7 +262,7 @@ export function Map({
     const handler = (e: maplibregl.MapMouseEvent) => {
       // Suppress clicks on the route line or alternative lines — those are
       // handled by the drag-to-add-via and select-alternative gestures.
-      const layers = ['route-line', 'alt-line'].filter(l => map.getLayer(l))
+      const layers = ['route-line', 'route-hit', 'alt-line'].filter(l => map.getLayer(l))
       if (layers.length) {
         const hits = map.queryRenderedFeatures(e.point, { layers })
         if (hits.length > 0) return
@@ -300,7 +313,8 @@ export function Map({
     const onLineEnter = () => { if (!dragging) canvas.style.cursor = 'pointer' }
     const onLineLeave = () => { if (!dragging) canvas.style.cursor = '' }
 
-    const onLineDown = (e: maplibregl.MapMouseEvent) => {
+    type LineEvent = maplibregl.MapMouseEvent | maplibregl.MapTouchEvent
+    const onLineDown = (e: LineEvent) => {
       // If the underlying DOM target is a marker, the user is grabbing a
       // waypoint pin, not the line. MapLibre fires layer-mousedown for both
       // because the marker overlaps the line visually; we must not start a
@@ -317,7 +331,7 @@ export function Map({
       // actually moves. Pure clicks stay as the regular pointer.
     }
 
-    const onMove = (e: maplibregl.MapMouseEvent) => {
+    const onMove = (e: LineEvent) => {
       if (!dragging) return
       if (!moved && startPoint) {
         const dx = e.point.x - startPoint.x
@@ -339,7 +353,7 @@ export function Map({
       if (moved && draft) draft.setLngLat(e.lngLat)
     }
 
-    const onUp = (e: maplibregl.MapMouseEvent) => {
+    const onUp = (e: LineEvent) => {
       if (!dragging) return
       const lng = e.lngLat.lng, lat = e.lngLat.lat
       const wasDrag = moved
@@ -378,15 +392,24 @@ export function Map({
     // against potentially thousands of vertices and noticeably slow down map
     // panning. Skip them; the drag-to-insert gesture still works without the
     // visible cursor hint.
-    map.on('mousedown', 'route-line', onLineDown)
+    // Bind to the wide transparent `route-hit` layer so touchpoints land. Both
+    // pointer + touch event families are wired so the gesture works on phones
+    // (where MapLibre does NOT emulate mouse events from touches).
+    map.on('mousedown', 'route-hit', onLineDown)
+    map.on('touchstart', ['route-hit'], onLineDown)
     map.on('mousemove', onMove)
+    map.on('touchmove', onMove)
     map.on('mouseup', onUp)
+    map.on('touchend', onUp)
     void onLineEnter; void onLineLeave  // intentionally unused
 
     return () => {
-      map.off('mousedown', 'route-line', onLineDown)
+      map.off('mousedown', 'route-hit', onLineDown)
+      map.off('touchstart', ['route-hit'], onLineDown)
       map.off('mousemove', onMove)
+      map.off('touchmove', onMove)
       map.off('mouseup', onUp)
+      map.off('touchend', onUp)
       cleanup()
     }
   }, [route, waypoints, onRouteDragInsert, onMapClick, followUser])
@@ -402,11 +425,25 @@ export function Map({
       const isLast = idx === waypoints.length - 1
       const color = isFirst ? '#22c55e' : isLast ? '#ef4444' : '#3b82f6'
       const el = document.createElement('div')
+      // Markers must be big enough to grab with a fingertip on phones — the
+      // previous 14 / 18 px sizes were nearly impossible to hit. The dot
+      // itself stays modest visually; an extra transparent ring extends the
+      // hit area without making the marker look chunky.
       if (isFirst || isLast) {
-        el.style.cssText = `width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer;`
+        el.style.cssText =
+          'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;'
+        const disc = document.createElement('div')
+        disc.style.cssText =
+          `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);`
+        el.appendChild(disc)
       } else {
-        el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 11px/14px sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;`
-        el.textContent = String(idx)
+        el.style.cssText =
+          'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:none;'
+        const disc = document.createElement('div')
+        disc.style.cssText =
+          `width:24px;height:24px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);color:#fff;font:bold 12px/16px sans-serif;display:flex;align-items:center;justify-content:center;`
+        disc.textContent = String(idx)
+        el.appendChild(disc)
       }
       const marker = new maplibregl.Marker({ element: el, draggable: true })
         .setLngLat([wp.lng, wp.lat])
@@ -652,6 +689,25 @@ export function Map({
     }
   }, [userPos])
 
+  // When navigation begins, fly to the start waypoint immediately so the
+  // user isn't stuck looking at the previous fitBounds while waiting for a
+  // GPS fix. Triggered once per follow-mode transition.
+  useEffect(() => {
+    if (!followUser) return
+    const map = mapRef.current
+    if (!map) return
+    const start = waypoints[0]
+    if (!start) return
+    map.easeTo({
+      center: [start.lng, start.lat],
+      zoom: 15,
+      pitch: 50,
+      bearing: 0,
+      duration: 500
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followUser])
+
   // Follow user position when navigating
   useEffect(() => {
     const map = mapRef.current
@@ -698,9 +754,64 @@ export function Map({
   }
   const stackBtn = { ...navButtonStyle, width: 40, height: 40 } as React.CSSProperties
 
+  const fitRoute = () => {
+    const m = mapRef.current
+    if (!m || !route) return
+    const coords = route.geometry.coordinates as [number, number][]
+    if (coords.length === 0) return
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c as maplibregl.LngLatLike),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    )
+    for (const a of route.alternatives) {
+      for (const c of a.geometry.coordinates as number[][]) {
+        bounds.extend([c[0], c[1]] as maplibregl.LngLatLike)
+      }
+    }
+    m.fitBounds(bounds, {
+      padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+      maxZoom: 14,
+      duration: 500
+    })
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* Sits under MapLibre's NavigationControl + GeolocateControl in the
+          top-right column. Visible only when there is a route to fit and we
+          aren't already following the user (in nav mode the bottom stack
+          owns the camera). */}
+      {!followUser && route && (
+        <button
+          onClick={fitRoute}
+          aria-label="Fit route to view"
+          title="Fit route to view"
+          style={{
+            position: 'absolute',
+            top: 'calc(140px + env(safe-area-inset-top))',
+            right: 10,
+            width: 29, height: 29,
+            borderRadius: 4,
+            border: 'none',
+            background: '#fff',
+            color: '#333',
+            boxShadow: '0 0 0 2px rgba(0,0,0,0.1)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 5
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 9V4h5" />
+            <path d="M20 9V4h-5" />
+            <path d="M4 15v5h5" />
+            <path d="M20 15v5h-5" />
+          </svg>
+        </button>
+      )}
+
       {followUser && userPos && (
         <div
           style={{

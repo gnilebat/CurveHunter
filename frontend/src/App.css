@@ -11,7 +11,14 @@ html, body, #root {
 
 .app {
   display: flex;
-  height: 100vh;
+  /* Use the small viewport unit so mobile browsers' dynamic toolbars don't
+     push the nav overlay's bottom panel off-screen. `100svh` is the height
+     when the browser UI is fully expanded — guaranteed visible at all times.
+     `100vh` was making the nav top card + bottom ETA panel exceed the
+     visible area on Chrome Android. */
+  height: 100svh;
+  /* Fallback for older engines that don't grok svh. */
+  height: 100dvh;
   overflow: hidden;
 }
 

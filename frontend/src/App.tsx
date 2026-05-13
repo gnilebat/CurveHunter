@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map } from './components/Map'
 import { RoutePanel } from './components/RoutePanel'
 import { NavOverlay } from './components/NavOverlay'
@@ -260,6 +260,23 @@ export default function App() {
       debug.setPlaying(false)
       debug.reset()
       setSimOpen(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.active])
+
+  // When navigation starts, force auto-zoom on so the camera adapts to the
+  // current road type without the user having to tap it. In-memory only — the
+  // user's persisted preference is restored when navigation ends.
+  const prevAutoZoomBeforeNav = useRef<boolean | null>(null)
+  useEffect(() => {
+    if (nav.active) {
+      if (prevAutoZoomBeforeNav.current === null) {
+        prevAutoZoomBeforeNav.current = autoZoom
+        if (!autoZoom) setAutoZoomState(true)
+      }
+    } else if (prevAutoZoomBeforeNav.current !== null) {
+      setAutoZoomState(prevAutoZoomBeforeNav.current)
+      prevAutoZoomBeforeNav.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nav.active])

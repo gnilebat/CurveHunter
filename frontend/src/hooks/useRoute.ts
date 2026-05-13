@@ -100,7 +100,15 @@ export function useRoute() {
       return () => clearTimeout(timer)
     }
     const allSet = waypoints.length >= 2 && waypoints.every((w): w is Waypoint => w !== null)
-    if (!allSet) { setRoute(null); return }
+    if (!allSet) {
+      // Keep the previously computed route on screen while the user is still
+      // filling in a newly-added Zwischenziel — only clear it when neither
+      // endpoint is set (the user has effectively reset the plan).
+      const start = waypoints[0]
+      const end = waypoints[waypoints.length - 1]
+      if (!start && !end) setRoute(null)
+      return
+    }
     const timer = setTimeout(() => planRoute(waypoints as Waypoint[], options), ROUTE_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [waypoints, options, roundTrip, planRoute])

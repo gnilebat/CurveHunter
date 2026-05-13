@@ -56,3 +56,11 @@ html, body {
 #root {
   height: 100%;
 }
+
+/* On phones the system status bar / notch can overlap MapLibre's top-right
+   control stack (zoom buttons + geolocate). Push them down by the safe-area
+   inset so they stay fully tappable. The right edge already sits inside the
+   safe area on every device we care about. */
+.maplibregl-ctrl-top-right {
+  padding-top: env(safe-area-inset-top);
+}
