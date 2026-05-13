@@ -1,8 +1,11 @@
+import { InfoIcon } from './InfoIcon'
 import styles from './Slider.module.css'
 
 interface Props {
   label: string
   hint?: string
+  /** Optional InfoIcon tooltip next to the label (replaces hint when set). */
+  info?: string
   value: number       // 0..max
   onChange: (v: number) => void
   step?: number
@@ -16,7 +19,7 @@ interface Props {
 }
 
 export function Slider({
-  label, hint, value, onChange,
+  label, hint, info, value, onChange,
   step = 0.05, max = 1, markerAt, warningOverMarker, intense
 }: Props) {
   const pct = Math.round(value * 100)
@@ -43,7 +46,10 @@ export function Slider({
       style={fillColor ? { '--fill-color': fillColor } as React.CSSProperties : undefined}
     >
       <div className={styles.head}>
-        <span className={styles.label}>{label}</span>
+        <span className={styles.label}>
+          {label}
+          {info && <InfoIcon text={info} />}
+        </span>
         <span className={styles.value}>{pct}%</span>
       </div>
       <div className={styles.trackWrap}>

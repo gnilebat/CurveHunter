@@ -12,12 +12,27 @@ export interface CustomPreset {
 
 const KEY = 'curvehunter.customPresets'
 
-export function useCustomPresets() {
-  const [presets, setPresets] = useState<CustomPreset[]>(() =>
-    getJSON<CustomPreset[]>(KEY, [])
-  )
+// Module-level store + listeners so every useCustomPresets() consumer stays
+// in sync after any mutation.
+let store: CustomPreset[] = getJSON<CustomPreset[]>(KEY, [])
+const listeners = new Set<() => void>()
 
-  useEffect(() => { setJSON(KEY, presets) }, [presets])
+function setStore(updater: (prev: CustomPreset[]) => CustomPreset[]): void {
+  store = updater(store)
+  setJSON(KEY, store)
+  listeners.forEach(l => l())
+}
+
+export function useCustomPresets() {
+  const [presets, setPresets] = useState<CustomPreset[]>(store)
+
+  useEffect(() => {
+    const onUpdate = () => setPresets(store)
+    listeners.add(onUpdate)
+    onUpdate()
+    return () => { listeners.delete(onUpdate) }
+  }, [])
+
   useEffect(() => { requestPersistentStorage() }, [])
 
   const save = useCallback((name: string, options: RouteOptions) => {
@@ -25,16 +40,16 @@ export function useCustomPresets() {
       v: 1, id: newId(), name: name.trim() || 'Preset',
       options, createdAt: Date.now()
     }
-    setPresets(prev => [...prev, entry])
+    setStore(prev => [...prev, entry])
     return entry.id
   }, [])
 
   const remove = useCallback((id: string) => {
-    setPresets(prev => prev.filter(p => p.id !== id))
+    setStore(prev => prev.filter(p => p.id !== id))
   }, [])
 
   const rename = useCallback((id: string, name: string) => {
-    setPresets(prev => prev.map(p => p.id === id ? { ...p, name: name.trim() || p.name } : p))
+    setStore(prev => prev.map(p => p.id === id ? { ...p, name: name.trim() || p.name } : p))
   }, [])
 
   return { presets, save, remove, rename }

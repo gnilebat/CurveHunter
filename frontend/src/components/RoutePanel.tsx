@@ -453,7 +453,7 @@ export function RoutePanel({
           <div className={styles.optionsBody}>
             <Slider
               label={t('options.curviness')}
-              hint={t('options.curvinessHint')}
+              info={t('options.curvinessHint')}
               value={options.curviness}
               max={2}
               markerAt={1}
@@ -473,7 +473,7 @@ export function RoutePanel({
             />
             <Slider
               label={t('options.avoidUrban')}
-              hint={t('options.avoidUrbanHint')}
+              info={t('options.avoidUrbanHint')}
               value={options.avoidUrban}
               onChange={(v) => onOptionChange('avoidUrban', v)}
             />

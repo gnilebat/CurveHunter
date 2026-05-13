@@ -13,10 +13,27 @@ export interface SavedRoute {
 
 const KEY = 'curvehunter.savedRoutes'
 
-export function useSavedRoutes() {
-  const [routes, setRoutes] = useState<SavedRoute[]>(() => getJSON<SavedRoute[]>(KEY, []))
+// Module-level store + listeners so every useSavedRoutes() consumer stays in
+// sync after any mutation.
+let store: SavedRoute[] = getJSON<SavedRoute[]>(KEY, [])
+const listeners = new Set<() => void>()
 
-  useEffect(() => { setJSON(KEY, routes) }, [routes])
+function setStore(updater: (prev: SavedRoute[]) => SavedRoute[]): void {
+  store = updater(store)
+  setJSON(KEY, store)
+  listeners.forEach(l => l())
+}
+
+export function useSavedRoutes() {
+  const [routes, setRoutes] = useState<SavedRoute[]>(store)
+
+  useEffect(() => {
+    const onUpdate = () => setRoutes(store)
+    listeners.add(onUpdate)
+    onUpdate()
+    return () => { listeners.delete(onUpdate) }
+  }, [])
+
   useEffect(() => { requestPersistentStorage() }, [])
 
   const save = useCallback((name: string, waypoints: Waypoint[], options: RouteOptions) => {
@@ -24,16 +41,16 @@ export function useSavedRoutes() {
       v: 1, id: newId(), name: name.trim() || 'Route',
       waypoints, options, createdAt: Date.now()
     }
-    setRoutes(prev => [entry, ...prev])
+    setStore(prev => [entry, ...prev])
     return entry.id
   }, [])
 
   const remove = useCallback((id: string) => {
-    setRoutes(prev => prev.filter(r => r.id !== id))
+    setStore(prev => prev.filter(r => r.id !== id))
   }, [])
 
   const rename = useCallback((id: string, name: string) => {
-    setRoutes(prev => prev.map(r => r.id === id ? { ...r, name: name.trim() || r.name } : r))
+    setStore(prev => prev.map(r => r.id === id ? { ...r, name: name.trim() || r.name } : r))
   }, [])
 
   return { routes, save, remove, rename }

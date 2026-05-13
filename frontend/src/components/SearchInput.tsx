@@ -44,7 +44,8 @@ export function SearchInput({
     if (shouldFocus) inputRef.current?.focus()
   }, [shouldFocus])
 
-  // Saved places matching the current query, marked so we can render a star.
+  // Saved places matching the current query — shown at the top of the
+  // dropdown with a star badge. Nothing is shown on empty input.
   const savedMatches = useMemo<Suggestion[]>(() => {
     const q = query.trim().toLowerCase()
     if (q.length < 1) return []

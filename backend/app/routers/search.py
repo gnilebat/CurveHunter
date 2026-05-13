@@ -9,7 +9,10 @@ class SearchResult(BaseModel):
     lat: float
     lng: float
     name: str
-    display_name: str
+    # camelCase to match the frontend SearchResult type — the previous
+    # snake_case caused `r.displayName` to be undefined client-side and the
+    # render crashed on `.split(',')`.
+    displayName: str
 
 
 @router.get("/search", response_model=list[SearchResult])
@@ -24,7 +27,7 @@ async def search_places(q: str = Query(..., min_length=2)):
             lat=float(r["lat"]),
             lng=float(r["lon"]),
             name=r["display_name"].split(",")[0].strip(),
-            display_name=r["display_name"]
+            displayName=r["display_name"]
         )
         for r in results
     ]
