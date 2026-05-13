@@ -51,6 +51,21 @@ interface Props {
   dimBelowSpeedSegments?: boolean
   /** Bottom area of the viewport covered by a UI panel (e.g. the bottom-sheet). */
   bottomInset?: number
+  /** When auto-zoom is on, the follow camera picks a zoom level based on the
+      current edge's speed limit (smaller streets → closer in). */
+  autoZoom?: boolean
+  onToggleAutoZoom?: () => void
+  /** Current edge's tagged max-speed in km/h (0 = unknown). Drives auto-zoom. */
+  currentMaxSpeed?: number
+}
+
+/** Heuristic: faster road → zoomed-out view, smaller streets → zoomed in. */
+function zoomForSpeed(kmh: number): number {
+  if (kmh >= 110) return 13.5
+  if (kmh >= 90) return 14.2
+  if (kmh >= 70) return 15
+  if (kmh >= 50) return 15.7
+  return 16.2  // residential / unknown
 }
 
 function buildRouteData(route: RouteResult): GeoJSON.FeatureCollection {
@@ -101,7 +116,9 @@ export function Map({
   onAlternativeSelect,
   followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
-  bottomInset = 0
+  bottomInset = 0,
+  autoZoom = false, onToggleAutoZoom,
+  currentMaxSpeed = 0
 }: Props) {
   const { locale } = useLocale()
   const { theme } = useTheme()
@@ -387,15 +404,16 @@ export function Map({
 
     // MapLibre emits emulated mouse events for touch input too, so these
     // listeners cover both desktop and mobile without separate touch wiring.
-    map.on('mouseenter', 'route-line', onLineEnter)
-    map.on('mouseleave', 'route-line', onLineLeave)
+    // mouseenter/mouseleave on a route-line layer are per-mousemove hit-tests
+    // against potentially thousands of vertices and noticeably slow down map
+    // panning. Skip them; the drag-to-insert gesture still works without the
+    // visible cursor hint.
     map.on('mousedown', 'route-line', onLineDown)
     map.on('mousemove', onMove)
     map.on('mouseup', onUp)
+    void onLineEnter; void onLineLeave  // intentionally unused
 
     return () => {
-      map.off('mouseenter', 'route-line', onLineEnter)
-      map.off('mouseleave', 'route-line', onLineLeave)
       map.off('mousedown', 'route-line', onLineDown)
       map.off('mousemove', onMove)
       map.off('mouseup', onUp)
@@ -472,16 +490,29 @@ export function Map({
       }
       source.setData(buildRouteData(route))
 
-      // Feed alternative paths into the 'alts' source so they render as
-      // muted lines below the primary route. Each carries its altIdx prop
-      // so the click handler can swap it in.
+      // Feed alternative paths into the 'alts' source as muted lines below
+      // the primary route. We DECIMATE the geometry first — each alt route
+      // can have thousands of vertices and rendering all of them at line-
+      // width 4 every frame is a major contributor to pan lag. A stride of
+      // 5 reduces GPU triangle work ~5× while staying visually faithful.
       if (altSource) {
+        const decimate = (coords: number[][], stride: number): number[][] => {
+          if (coords.length <= 4) return coords
+          const out: number[][] = []
+          for (let i = 0; i < coords.length; i += stride) out.push(coords[i])
+          const last = coords[coords.length - 1]
+          if (out[out.length - 1] !== last) out.push(last)
+          return out
+        }
         altSource.setData({
           type: 'FeatureCollection',
           features: route.alternatives.map((a, i) => ({
             type: 'Feature',
             properties: { altIdx: i },
-            geometry: a.geometry
+            geometry: {
+              type: 'LineString',
+              coordinates: decimate(a.geometry.coordinates as number[][], 5)
+            }
           }))
         })
       }
@@ -509,25 +540,9 @@ export function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route])
 
-  // Click on an alternative line → swap it into the primary slot. We
-  // intentionally skip mouseenter/mouseleave here — the floating alt badge
-  // already signals clickability, and per-layer hover handlers force
-  // MapLibre to hit-test these long polylines on every mousemove which
-  // makes map panning visibly laggy.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !onAlternativeSelect) return
-    const onAltClick = (e: maplibregl.MapMouseEvent & { features?: maplibregl.MapGeoJSONFeature[] }) => {
-      const f = e.features?.[0]
-      if (!f) return
-      const idx = (f.properties as { altIdx?: number })?.altIdx
-      if (typeof idx === 'number') onAlternativeSelect(idx)
-    }
-    map.on('click', 'alt-line', onAltClick)
-    return () => {
-      map.off('click', 'alt-line', onAltClick)
-    }
-  }, [onAlternativeSelect])
+  // Alternative routes are selected only via their floating badge marker —
+  // the polyline itself is not interactive. Skipping the layer click handler
+  // also avoids any per-click hit-testing cost on the alt geometry.
 
   // Floating clickable badge near the midpoint of each alternative route —
   // easier hit target than the thin line, plus shows distance + time delta
@@ -648,12 +663,15 @@ export function Map({
     if (!map || !followUser || !userPos) return
     map.easeTo({
       center: [userPos.lng, userPos.lat],
-      zoom: 16,
+      // Only the recentre + manual buttons set zoom — the follow camera
+      // leaves zoom alone so user-chosen zoom level sticks. Auto-zoom mode
+      // overrides this with a speed-derived zoom.
+      ...(autoZoom ? { zoom: zoomForSpeed(currentMaxSpeed) } : {}),
       pitch: 50,
       bearing: userPos.heading ?? 0,
       duration: 200
     })
-  }, [followUser, userPos])
+  }, [followUser, userPos, autoZoom, currentMaxSpeed])
 
   // Reset camera when navigation ends
   useEffect(() => {
@@ -674,41 +692,103 @@ export function Map({
     })
   }
 
+  const navButtonStyle: React.CSSProperties = {
+    width: 44, height: 44,
+    borderRadius: '50%',
+    border: 'none',
+    background: 'linear-gradient(135deg, var(--secondary), var(--secondary-hover))',
+    color: '#fff', cursor: 'pointer',
+    boxShadow: '0 4px 10px rgba(77, 124, 223, 0.4)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }
+  const stackBtn = { ...navButtonStyle, width: 40, height: 40 } as React.CSSProperties
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       {followUser && userPos && (
-        <button
-          onClick={recentre}
-          aria-label="Recentre on me"
-          title="Recentre"
+        <div
           style={{
             position: 'absolute',
             right: 16,
             bottom: 96,
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            border: 'none',
-            background: 'linear-gradient(135deg, var(--secondary), var(--secondary-hover))',
-            color: '#fff',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(77, 124, 223, 0.4)',
             display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
             alignItems: 'center',
-            justifyContent: 'center',
             zIndex: 25
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
-            <circle cx="12" cy="12" r="8" />
-            <line x1="12" y1="2" x2="12" y2="5" />
-            <line x1="12" y1="19" x2="12" y2="22" />
-            <line x1="2" y1="12" x2="5" y2="12" />
-            <line x1="19" y1="12" x2="22" y2="12" />
-          </svg>
-        </button>
+          {onToggleAutoZoom && (
+            <button
+              onClick={onToggleAutoZoom}
+              aria-pressed={autoZoom}
+              title="Auto-zoom"
+              aria-label="Auto-zoom"
+              style={{
+                ...stackBtn,
+                background: autoZoom
+                  ? 'linear-gradient(135deg, var(--accent), var(--accent-hover))'
+                  : stackBtn.background,
+                boxShadow: autoZoom
+                  ? '0 4px 10px rgba(245, 158, 11, 0.45)'
+                  : stackBtn.boxShadow
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 7V3h4" />
+                <path d="M21 7V3h-4" />
+                <path d="M3 17v4h4" />
+                <path d="M21 17v4h-4" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => {
+              const m = mapRef.current; if (!m) return
+              m.stop()  // cancel any in-flight ease so rapid taps actually stack
+              m.easeTo({ zoom: m.getZoom() + 1.5, duration: 160 })
+            }}
+            aria-label="Zoom in"
+            title="Zoom in"
+            style={stackBtn}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              const m = mapRef.current; if (!m) return
+              m.stop()
+              m.easeTo({ zoom: m.getZoom() - 1.5, duration: 160 })
+            }}
+            aria-label="Zoom out"
+            title="Zoom out"
+            style={stackBtn}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            onClick={recentre}
+            aria-label="Recentre on me"
+            title="Recentre"
+            style={navButtonStyle}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="12" r="8" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   )

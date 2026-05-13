@@ -5,6 +5,7 @@ import { NavOverlay } from './components/NavOverlay'
 import { NavDebugPanel } from './components/NavDebugPanel'
 import { SaveMenu } from './components/SaveMenu'
 import { PromptDialog } from './components/PromptDialog'
+import { Modal } from './components/Modal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { useRoute } from './hooks/useRoute'
 import { useNavigation, type NavCue } from './hooks/useNavigation'
@@ -18,10 +19,12 @@ import { useTTS } from './tts/useTTS'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
 import { routeToGpx, downloadGpx, defaultGpxFilename, parseGpx } from './lib/gpx'
+import { buildShareUrl, decodeRoute } from './lib/share'
 import type { Waypoint, RouteOptions } from './types'
 import './App.css'
 
 const DEBUG_NAV_KEY = 'curvehunter.debug.nav'
+const AUTO_ZOOM_KEY = 'curvehunter.nav.autoZoom'
 
 function sameOptions(a: RouteOptions, b: RouteOptions): boolean {
   return (
@@ -67,6 +70,17 @@ export default function App() {
     try { localStorage.setItem(DEBUG_NAV_KEY, on ? 'true' : 'false') } catch { /* ignore */ }
   }, [])
   const debug = useNavDebug(route, debugNav)
+
+  const [autoZoom, setAutoZoomState] = useState<boolean>(() => {
+    try { return localStorage.getItem(AUTO_ZOOM_KEY) === 'true' } catch { return false }
+  })
+  const toggleAutoZoom = useCallback(() => {
+    setAutoZoomState(prev => {
+      const next = !prev
+      try { localStorage.setItem(AUTO_ZOOM_KEY, next ? 'true' : 'false') } catch { /* ignore */ }
+      return next
+    })
+  }, [])
 
   const isMobile = useIsMobile()
   const [panelHeight, setPanelHeight] = useState<number>(() =>
@@ -133,6 +147,42 @@ export default function App() {
       alert((e as Error).message || 'GPX import failed')
     }
   }, [loadRoute, options])
+
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+
+  // Import a shared route if the URL contains ?r=<token>. Runs once on mount.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('r')
+    if (!token) return
+    const shared = decodeRoute(token)
+    // Strip the query so a reload doesn't re-apply the import.
+    const clean = new URL(window.location.href)
+    clean.search = ''
+    window.history.replaceState({}, '', clean.toString())
+    if (shared) loadRoute(shared.wps, shared.opts)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleShareRoute = useCallback(async () => {
+    const wps = waypoints.filter((w): w is Waypoint => w !== null)
+    if (wps.length < 2) return
+    const url = buildShareUrl(wps, options)
+    // Native share sheet on supporting platforms (iOS / Android / some desktop).
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: 'Schräglage',
+          text: `${wps[0].name} → ${wps[wps.length - 1].name}`,
+          url
+        })
+        return
+      } catch {
+        // User cancelled or share failed — fall through to the in-app modal.
+      }
+    }
+    setShareUrl(url)
+  }, [waypoints, options])
 
   const handleExportGpx = useCallback(() => {
     if (!route) return
@@ -302,6 +352,7 @@ export default function App() {
           onSaveRoute={handleSaveRoute}
           onSavePreset={handleSavePreset}
           onExportGpx={handleExportGpx}
+          onShareRoute={handleShareRoute}
           panelHeight={panelHeight}
           onPanelHeightChange={setPanelHeight}
           roundTripEnabled={roundTrip.enabled}
@@ -327,6 +378,9 @@ export default function App() {
           dimUrbanSegments={options.ignoreUrbanCurves}
           dimBelowSpeedSegments={options.minCurveSpeed > 0}
           bottomInset={bottomInset}
+          autoZoom={autoZoom}
+          onToggleAutoZoom={toggleAutoZoom}
+          currentMaxSpeed={nav.currentMaxSpeed}
         />
         {nav.active && (
           <NavOverlay
@@ -396,6 +450,46 @@ export default function App() {
         onCancel={() => setPendingSave(null)}
         onConfirm={handleConfirmSave}
       />
+
+      <Modal
+        open={shareUrl !== null}
+        onClose={() => setShareUrl(null)}
+        title={t('share.title')}
+        width={420}
+      >
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 12px' }}>
+          {t('share.body')}
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            readOnly
+            value={shareUrl ?? ''}
+            onFocus={(e) => e.currentTarget.select()}
+            style={{
+              flex: 1, padding: '8px 10px',
+              border: '1px solid var(--border)', borderRadius: 6,
+              background: 'var(--bg-elevated)', color: 'var(--text)',
+              fontSize: 12
+            }}
+          />
+          <button
+            onClick={async () => {
+              if (shareUrl) {
+                try { await navigator.clipboard.writeText(shareUrl) } catch { /* ignore */ }
+              }
+            }}
+            style={{
+              padding: '8px 14px',
+              border: 'none', borderRadius: 6,
+              background: 'var(--accent)', color: '#fff',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer'
+            }}
+          >
+            {t('share.copy')}
+          </button>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         open={pendingDelete?.kind === 'preset'}
