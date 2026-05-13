@@ -83,18 +83,20 @@ def length_in_mask_m(coords: list[list[float]], mask: list[bool]) -> float:
 def build_urban_mask(
     n_coords: int,
     road_class_ranges: list,
-    max_speed_ranges: list
+    max_speed_ranges: list  # kept for signature compatibility; intentionally unused
 ) -> list[bool]:
-    """GraphHopper details → per-coordinate urban mask."""
+    """GraphHopper details → per-coordinate urban mask.
+
+    Urban is defined purely by road class (residential / living_street /
+    service / pedestrian). Slow stretches with `max_speed <= 50` are NOT
+    treated as urban — those are handled by the separate `min_curve_speed`
+    slider, so the two filters stay independent.
+    """
+    del max_speed_ranges  # explicit: unused
     is_urban = [False] * n_coords
     for entry in road_class_ranges:
         from_idx, to_idx, cls = entry[0], entry[1], entry[2]
         if isinstance(cls, str) and cls.lower() in URBAN_ROAD_CLASSES:
-            for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
-                is_urban[i] = True
-    for entry in max_speed_ranges:
-        from_idx, to_idx, speed = entry[0], entry[1], entry[2]
-        if isinstance(speed, (int, float)) and 0 < speed <= 50:
             for i in range(max(0, from_idx), min(to_idx + 1, n_coords)):
                 is_urban[i] = True
     return is_urban

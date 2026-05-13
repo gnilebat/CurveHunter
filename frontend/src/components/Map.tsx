@@ -419,7 +419,32 @@ export function Map({
       })
       waypointMarkers.current.push(marker)
     })
-  }, [waypoints, onWaypointDragEnd])
+
+    // If any set waypoint is currently off-screen, gently re-fit the view so
+    // the user can see what they just placed. Skipped during navigation (the
+    // follow camera owns the viewport) and skipped when there's only one
+    // waypoint inside the visible area already.
+    if (followUser) return
+    const set = waypoints.filter((w): w is Waypoint => w !== null)
+    if (set.length === 0) return
+    const view = map.getBounds()
+    const anyOffscreen = set.some(w => !view.contains([w.lng, w.lat]))
+    if (!anyOffscreen) return
+    if (set.length === 1) {
+      const w = set[0]
+      map.easeTo({ center: [w.lng, w.lat], duration: 400 })
+      return
+    }
+    const b = set.reduce(
+      (bb, w) => bb.extend([w.lng, w.lat] as maplibregl.LngLatLike),
+      new maplibregl.LngLatBounds([set[0].lng, set[0].lat], [set[0].lng, set[0].lat])
+    )
+    map.fitBounds(b, {
+      padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+      maxZoom: 13,
+      duration: 400
+    })
+  }, [waypoints, onWaypointDragEnd, followUser, bottomInset])
 
   // Dim segments excluded from the curviness score (urban / below-speed)
   useEffect(() => {

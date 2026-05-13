@@ -52,12 +52,12 @@ def build_custom_model(
         priority.append({"if": "road_class == LIVING_STREET", "multiply_by": living_mult})
         priority.append({"if": "max_speed > 0 && max_speed <= 50", "multiply_by": speed_mult})
 
-    # "Ignoriere Kurven Innerorts" — heavy routing penalty on urban roads.
-    # Stacks with avoid_urban (multipliers compound).
+    # "Ignoriere Kurven Innerorts" — heavy routing penalty on urban road
+    # classes only. Slow stretches with max_speed <= 50 are owned by the
+    # separate min_curve_speed slider, so the two settings stay independent.
     if ignore_urban_curves:
-        priority.append({"if": "road_class == RESIDENTIAL",            "multiply_by": 0.25})
-        priority.append({"if": "road_class == LIVING_STREET",          "multiply_by": 0.1})
-        priority.append({"if": "max_speed > 0 && max_speed <= 50",     "multiply_by": 0.5})
+        priority.append({"if": "road_class == RESIDENTIAL",   "multiply_by": 0.25})
+        priority.append({"if": "road_class == LIVING_STREET", "multiply_by": 0.1})
 
     # "Mindesttempo für Kurven" — also push the router away from roads below the
     # threshold so the route actually reflects the score-filter intent.
