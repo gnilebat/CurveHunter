@@ -189,7 +189,10 @@ Sorted by impact / effort:
 | **Reverse whole sequence** | Current swap only flips start ↔ end | One-liner in `useRoute` |
 | **Recently used places** auto-history | Pair with saved-places UI | Capped list under a new key |
 | **PWA install prompt + service worker** | Offline shell + "Add to home screen" | `vite-plugin-pwa`, ~30 min |
+| **Pre-departure summary screen** | "212 km · 87 % Landstraße · 3 Pässe" before pressing Start | Aggregates existing route metadata |
 | **Curvature heatmap layer** on the bare map | Passive discovery of fun roads | Built once Phase 2 ETL fills PostGIS |
+| **Riding-mode preset family** (Touring / Sport / Adventure / Off-road) | Apply coherent option bundles, less slider fiddling | Extends `ROUTE_PRESETS` |
+| **Day/night basemap auto-switch** by local sunset | Theming exists, just gate on time | `SunCalc` lib or simple latitude/time approx |
 | **Native Android wrap via Capacitor** | Background voice + Play Store presence | Same React code; switch when PWA limits bite |
 | **Piper TTS engine** (offline, neural) | Better German voices on devices with poor system TTS | Engine interface already in place at `src/tts/engines.ts` |
 

@@ -4,12 +4,17 @@ import './index.css'
 import App from './App.tsx'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { ThemeProvider } from './theme/ThemeProvider'
+import { InstallPrompt } from './pwa/InstallPrompt'
+import { registerSW } from './pwa/registerSW'
+
+registerSW()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <LocaleProvider>
         <App />
+        <InstallPrompt />
       </LocaleProvider>
     </ThemeProvider>
   </StrictMode>,

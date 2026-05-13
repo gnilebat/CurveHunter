@@ -88,6 +88,12 @@ export const strings = {
       body: 'Mit diesem Link kann jeder die Route direkt in Schräglage öffnen.',
       copy: 'Kopieren'
     },
+    pwa: {
+      title: 'Schräglage installieren',
+      body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff und Offline-Nutzung.',
+      install: 'Installieren',
+      dismiss: 'Später'
+    },
     save: {
       menuTitle: 'Gespeichert',
       close: 'Schließen',
@@ -266,6 +272,12 @@ export const strings = {
       title: 'Share route',
       body: 'Anyone with this link can open the same route in Schräglage.',
       copy: 'Copy'
+    },
+    pwa: {
+      title: 'Install Schräglage',
+      body: 'Add the app to your home screen for quick access and offline use.',
+      install: 'Install',
+      dismiss: 'Later'
     },
     save: {
       menuTitle: 'Saved',
