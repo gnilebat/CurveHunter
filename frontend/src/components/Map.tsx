@@ -111,6 +111,55 @@ const ROUTE_LINE_COLOR: maplibregl.ExpressionSpecification = [
   ]
 ] as maplibregl.ExpressionSpecification
 
+// Install the alt + route sources and layers. Idempotent so it's safe to call
+// from both the initial `load` and the `style.load` after a setStyle — some
+// sources may survive setStyle on certain MapLibre versions, others don't.
+function installRouteLayers(map: maplibregl.Map): void {
+  if (!map.getSource('alts')) {
+    map.addSource('alts', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    })
+  }
+  if (!map.getLayer('alt-line')) {
+    map.addLayer({
+      id: 'alt-line',
+      type: 'line',
+      source: 'alts',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#64748b', 'line-width': 4, 'line-opacity': 0.55 }
+    })
+  }
+  if (!map.getSource('route')) {
+    map.addSource('route', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    })
+  }
+  if (!map.getLayer('route-casing')) {
+    map.addLayer({
+      id: 'route-casing',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#1f2937', 'line-width': 7, 'line-opacity': 0.35 }
+    })
+  }
+  if (!map.getLayer('route-line')) {
+    map.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-width': 5,
+        'line-opacity': 0.95,
+        'line-color': ROUTE_LINE_COLOR
+      }
+    })
+  }
+}
+
 export function Map({
   waypoints, route, onMapClick, onWaypointDragEnd, onRouteDragInsert,
   onAlternativeSelect,
@@ -143,53 +192,7 @@ export function Map({
       trackUserLocation: false
     }), 'top-right')
 
-    map.on('load', () => {
-      // Alternatives go FIRST so the active route stacks visually on top.
-      map.addSource('alts', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      })
-      map.addLayer({
-        id: 'alt-line',
-        type: 'line',
-        source: 'alts',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#64748b',
-          'line-width': 4,
-          'line-opacity': 0.55
-        }
-      })
-
-      map.addSource('route', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      })
-      // Subtle dark casing under the coloured line
-      map.addLayer({
-        id: 'route-casing',
-        type: 'line',
-        source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#1f2937',
-          'line-width': 7,
-          'line-opacity': 0.35
-        }
-      })
-      // Coloured route line — green (straight) → red (twisty)
-      map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-width': 5,
-          'line-opacity': 0.95,
-          'line-color': ROUTE_LINE_COLOR
-        }
-      })
-    })
+    map.on('load', () => { installRouteLayers(map) })
 
     mapRef.current = map
 
@@ -232,40 +235,7 @@ export function Map({
     if (!map) return
     map.setStyle(buildMapStyle(locale, theme))
     map.once('style.load', () => {
-      if (map.getSource('route')) return
-      map.addSource('alts', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      })
-      map.addLayer({
-        id: 'alt-line',
-        type: 'line',
-        source: 'alts',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#64748b', 'line-width': 4, 'line-opacity': 0.55 }
-      })
-      map.addSource('route', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      })
-      map.addLayer({
-        id: 'route-casing',
-        type: 'line',
-        source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#1f2937', 'line-width': 7, 'line-opacity': 0.35 }
-      })
-      map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-width': 5,
-          'line-opacity': 0.95,
-          'line-color': ROUTE_LINE_COLOR
-        }
-      })
+      installRouteLayers(map)
       if (route) {
         const src = map.getSource('route') as maplibregl.GeoJSONSource | undefined
         src?.setData(buildRouteData(route))
@@ -747,8 +717,10 @@ export function Map({
           <button
             onClick={() => {
               const m = mapRef.current; if (!m) return
-              m.stop()  // cancel any in-flight ease so rapid taps actually stack
-              m.easeTo({ zoom: m.getZoom() + 1.5, duration: 160 })
+              // setZoom (sync) instead of easeTo so the follow-camera easeTo
+              // that fires on the next userPos tick can't cut the zoom step short.
+              m.stop()
+              m.setZoom(m.getZoom() + 1)
             }}
             aria-label="Zoom in"
             title="Zoom in"
@@ -763,7 +735,7 @@ export function Map({
             onClick={() => {
               const m = mapRef.current; if (!m) return
               m.stop()
-              m.easeTo({ zoom: m.getZoom() - 1.5, duration: 160 })
+              m.setZoom(m.getZoom() - 1)
             }}
             aria-label="Zoom out"
             title="Zoom out"
