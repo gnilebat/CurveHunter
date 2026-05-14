@@ -1,8 +1,8 @@
-# Schräglage
+# Schräglage Maps
 
 Self-hosted motorcycle route planner that scores roads by curviness and lets riders find — or generate — fun, twisty routes instead of the fastest line. Built around an open-source stack with no third-party APIs; everything runs on your own infrastructure.
 
-The on-disk repo folder is still `CurveHunter/` from the original prototype; only the user-facing brand changed.
+Live at **[schraeglage-maps.de](https://schraeglage-maps.de)**. The on-disk repo folder is still `CurveHunter/` from the original prototype; only the user-facing brand changed.
 
 ---
 
@@ -20,8 +20,8 @@ The on-disk repo folder is still `CurveHunter/` from the original prototype; onl
 - **Speed-limit badge** during nav — pulses when GPS speed exceeds the tagged limit by > 5 km/h.
 - **Bottom-sheet mobile UI** with a drag handle to expand/collapse; map pans up until it covers 50 % of the screen then locks.
 - **Light + dark themes**, German + English (German is the source of truth).
-- **PWA-ready** — manifest, theme color, wake-lock during nav, in-UI "voice may pause when screen locks" warning.
-- **Debug navigation simulator** — drag a slider or auto-play position along the route to verify cues without leaving the chair.
+- **PWA** — installable (manifest + PNG icons + service worker), theme color, wake-lock during nav, in-UI "voice may pause when screen locks" warning, offline app-shell cache.
+- **Route preview** — toggle a simulator in the nav view (robot-head button next to mute) to play your position along the route and preview the turns before riding.
 
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the full feature list, status, and backlog.
 
@@ -35,7 +35,7 @@ See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the full feature list, 
 | Map rendering | MapLibre GL JS | MIT-licensed, reads PMTiles directly |
 | Map tiles | Protomaps PMTiles (self-hosted) | Single-file vector tiles served via nginx Range requests — no tile server process needed |
 | Routing | **GraphHopper** (self-hosted, Apache 2.0) | Custom motorcycle profile + curvy-weighted custom model, alternative routes, round-trip algorithm |
-| Geocoding | **Photon** (komoot, Apache 2.0) | Fast autocomplete on OSM data; ~5× lighter than Nominatim, pre-built indexes available |
+| Geocoding | **Photon** (komoot, Apache 2.0) | Fast autocomplete on OSM data; ~5× lighter than Nominatim. Germany index built locally from fresh Geofabrik data — see [infra/GEOCODER.md](infra/GEOCODER.md) |
 | Backend API | FastAPI (Python 3.12) | Curvature scoring, GraphHopper / Photon HTTP clients, FastAPI auto-OpenAPI |
 | Spatial DB | PostgreSQL 16 + PostGIS | Future: persistent per-segment curvature scores (Phase 2 ETL) |
 | Elevation | SRTM via GraphHopper's elevation provider | Adds the 3rd ordinate to route geometry; powers the elevation chart |
@@ -67,59 +67,51 @@ routing/                  GraphHopper config + custom model
   config.yml              two profiles: motorcycle, motorcycle_curvy
   motorcycle_curvy.json   penalises highways, rewards tertiary roads
 infra/
-  docker-compose.yml      nginx + backend + graphhopper + photon + postgres
-  nginx/nginx.conf        serves frontend, proxies /api/, serves /tiles/ PMTiles
-  tiles/                  place map.pmtiles here (gitignored)
-  data/osm/               place map.osm.pbf here (gitignored)
-etl/                      Offline curvature ETL (Phase 2 — stub)
+  docker-compose.yml          base stack: nginx + backend + graphhopper + photon + postgres
+  docker-compose.override.yml local dev — publishes nginx on :80 (auto-loaded)
+  docker-compose.prod.yml     production — Caddy entrypoint + HTTPS, memory tuning
+  docker-compose.import.yml   local-only Photon index builder (Nominatim + importer)
+  caddy/Caddyfile             reverse proxy + automatic Let's Encrypt TLS
+  photon/Dockerfile           Photon image — builds AND serves the geocoder index
+  scripts/push-geocoder.sh    rsync the built Photon index to the server
+  nginx/nginx.conf            serves frontend, proxies /api/, serves /tiles/ PMTiles
+  tiles/                      place map.pmtiles here (gitignored)
+  data/osm/                   place map.osm.pbf here (gitignored)
+  DEPLOY.md                   full production deployment plan
+  GEOCODER.md                 how to build + ship the Photon Germany index
+etl/                          Offline curvature ETL (Phase 2 — stub)
 ```
 
 ---
 
 ## Deployment
 
-### 1. Prerequisites
-- Docker + Docker Compose
-- ~80 GB free disk for the geocoder (Photon planet) **or** ~12 GB if you bundle only one country (and accept stale data — see plan)
-- A drive with at least 120 GB total to be safe (PMTiles + GraphHopper graph cache + Photon index + Postgres)
-- Hetzner VPS recommended for production; works fine locally too
+**Production** — the full step-by-step plan (domain, Hetzner server, hardening, HTTPS, data, deploy, updates) lives in **[infra/DEPLOY.md](infra/DEPLOY.md)**. Target is a ~€14/month Hetzner CX42 serving [schraeglage-maps.de](https://schraeglage-maps.de) behind Caddy with automatic Let's Encrypt TLS.
 
-### 2. Get the data
-1. **PMTiles** — grab a regional file from [maps.protomaps.com/builds](https://maps.protomaps.com/builds/) → `infra/tiles/map.pmtiles`
-2. **OSM PBF** — grab a country/region from [download.geofabrik.de](https://download.geofabrik.de/) → `infra/data/osm/map.osm.pbf`
-3. **Photon index** — download `photon-db-planet-1.0-latest.tar.bz2` from [download1.graphhopper.com/public](https://download1.graphhopper.com/public/) (or the koalasec mirror baked into the rtuszik image), extract to the host path bound in `docker-compose.yml` (`D:/Docker/photon_data` on Windows; adjust to your platform).
+**Geocoder data** — Photon serves a Germany-only index you build yourself from current Geofabrik data; no giant planet download, no stale prebuilt dumps. See **[infra/GEOCODER.md](infra/GEOCODER.md)**.
 
-### 3. Configure
-Copy `infra/.env.example` to `infra/.env` and set `POSTGRES_PASSWORD`.
+### Local development
 
-### 4. Run
-```bash
-cd infra
-# Core stack
-docker compose up -d
-# Bring Photon up separately (geocoder profile keeps it out of the default `up`)
-docker compose --profile geocoder up -d photon
-```
+Prerequisites: Docker + Docker Compose, Node 20, ~30 GB free disk.
 
-Open <http://localhost>. The frontend at port 80 talks to FastAPI (proxied via nginx) which in turn talks to GraphHopper and Photon.
+1. **Data files** (gitignored — download separately):
+   - PMTiles → `infra/tiles/map.pmtiles` ([maps.protomaps.com/builds](https://maps.protomaps.com/builds/), cut a Germany bbox)
+   - OSM PBF → `infra/data/osm/map.osm.pbf` ([download.geofabrik.de](https://download.geofabrik.de/europe/germany-latest.osm.pbf))
+   - Photon index → `infra/photon-index/` (build per [infra/GEOCODER.md](infra/GEOCODER.md))
+2. **Config:** `cp infra/.env.example infra/.env` and set `POSTGRES_PASSWORD`.
+3. **Run the stack:**
+   ```bash
+   cd infra
+   docker compose --profile geocoder up -d --build
+   ```
+   `docker-compose.override.yml` is auto-loaded and publishes nginx on `:80`. GraphHopper imports the routing graph on first start (~5–8 min for Germany; the healthcheck waits it out). Elevation is pulled from SRTM on demand into a persisted cache volume.
+4. **Frontend HMR** (optional, for UI work):
+   ```bash
+   cd frontend && npm run dev      # http://localhost:5173, proxies /api → :80
+   ```
+5. **Backend on host** (optional): `cd backend && uvicorn app.main:app --reload --port 8000`
 
-### 5. First-time GraphHopper import
-GraphHopper imports the PBF and computes the routing graph on first start. For Germany (~4 GB PBF) this takes ~5–8 minutes; the container's healthcheck waits this out. Elevation is pulled from SRTM on demand into a persisted cache volume.
-
-### 6. Dev workflow
-```bash
-# Frontend dev server with HMR (proxies /api → compose nginx on :80)
-cd frontend && npm run dev      # http://localhost:5173
-
-# Frontend production build
-cd frontend && npm run build
-
-# Backend dev server directly on host
-cd backend && uvicorn app.main:app --reload --port 8000
-
-# Full stack via Docker Compose
-cd infra && docker compose up
-```
+Open <http://localhost>.
 
 ---
 
@@ -145,7 +137,13 @@ PMTiles served by nginx — no tile server process
 
 ## Data refresh
 
-This is the **highest-priority open work** in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): all three datasets (PMTiles, GraphHopper graph, Photon index) currently freeze at the date they were downloaded. Refresh is manual today; an automated refresh pipeline (cron / timer / systemd / refresh-job container) is in design.
+All three datasets freeze at the date they were downloaded. Refresh is manual today:
+
+- **Photon geocoder** — rebuild the Germany index locally from fresh Geofabrik data and push it to the server: [infra/GEOCODER.md](infra/GEOCODER.md).
+- **GraphHopper graph** — replace `infra/data/osm/map.osm.pbf`, clear the `graphhopper-cache` volume, restart (see [infra/DEPLOY.md](infra/DEPLOY.md) §12).
+- **PMTiles** — replace `infra/tiles/map.pmtiles` with a fresh build.
+
+A fully automated refresh pipeline (cron / timer / refresh-job container) is still in design — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ---
 

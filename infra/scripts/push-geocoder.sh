@@ -4,7 +4,7 @@
 # docker-compose.import.yml.
 #
 # Config via env (or edit the defaults below):
-#   GEOCODER_SERVER      ssh target, e.g. deploy@schraeglage.example.com
+#   GEOCODER_SERVER      ssh target, e.g. deploy@schraeglage-maps.de
 #   GEOCODER_REMOTE_DIR  path to infra/photon-index on the server
 set -euo pipefail
 

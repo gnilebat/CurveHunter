@@ -36,7 +36,7 @@ come from `docker-compose.prod.yml`.
 
 | Item | Choice | Cost |
 |---|---|---|
-| Domain | any registrar (Namecheap, Porkbun, INWX, Cloudflare Registrar) | ~€8–12 / year |
+| Domain | `schraeglage-maps.de` — Namecheap | €5.97 / year (paid) |
 | Server | **Hetzner Cloud CX42** — 8 vCPU, 16 GB RAM, 160 GB SSD | ~€13.49 / month |
 | TLS certificate | Let's Encrypt via Caddy | free |
 | **Total** | | **~€14 / month** |
@@ -47,15 +47,16 @@ pick.
 
 ---
 
-## 3. Get a domain
+## 3. Domain
 
-1. Buy a domain at any registrar. A short `.de` or `.app` is fine. Example
-   used below: `schraeglage.example.com` (use your real one).
-2. You'll point a DNS **A record** at the server's IP in step 9 — don't do it
-   yet, you need the IP first.
-3. (Optional but recommended) Move DNS to **Cloudflare** (free plan): faster
-   DNS, easy record management, optional proxy/DDoS shielding later. Not
-   required — Caddy gets the cert directly from Let's Encrypt either way.
+`schraeglage-maps.de` is already registered at **Namecheap** — nothing to buy.
+You'll point its DNS at the server in step 9, once the server exists and you
+have its IP.
+
+(Optional: you could move DNS hosting to Cloudflare's free plan for a nicer
+panel and optional proxy/DDoS shielding later. Not required — Caddy gets the
+TLS cert straight from Let's Encrypt either way. The steps below assume DNS
+stays at Namecheap.)
 
 ---
 
@@ -165,24 +166,30 @@ nano .env
 
 Set:
 - `POSTGRES_PASSWORD` — a long random string
-- `DOMAIN` — your real domain (e.g. `schraeglage.example.com`)
+- `DOMAIN` — `schraeglage-maps.de`
 - `ACME_EMAIL` — your email (Let's Encrypt expiry notices)
 
 ---
 
 ## 9. Point DNS at the server
 
-At your DNS provider, create:
+In the **Namecheap** dashboard:
 
-| Type | Name | Value |
-|---|---|---|
-| A | `schraeglage` (or `@`) | `<server-ip>` |
+1. **Domain List → Manage** (next to `schraeglage-maps.de`) → **Advanced DNS** tab.
+2. Under **Host Records**, delete the default parking/redirect records, then
+   **Add New Record**:
 
-Wait for it to resolve (`dig +short schraeglage.example.com` → your IP).
-**Caddy can't get a TLS certificate until DNS resolves**, so do this before
-the first deploy. If you use Cloudflare, set the record to **DNS-only (grey
-cloud)** for the first deploy so Caddy's HTTP challenge works; you can switch
-it to proxied afterwards.
+   | Type | Host | Value | TTL |
+   |---|---|---|---|
+   | A Record | `@` | `<server-ip>` | Automatic |
+
+3. (Optional) add a second `A Record`, Host `www` → same IP, so
+   `www.schraeglage-maps.de` resolves too.
+4. Save. Propagation is usually minutes — check with
+   `dig +short schraeglage-maps.de` → it should print your server IP.
+
+**Caddy can't get a TLS certificate until DNS resolves**, so wait for that
+before the first deploy.
 
 ---
 
@@ -236,8 +243,8 @@ seconds once DNS resolves.
 
 ```bash
 # from anywhere
-curl -I https://schraeglage.example.com            # 200, valid cert
-curl 'https://schraeglage.example.com/api/search?q=Berlin'   # geocoder
+curl -I https://schraeglage-maps.de            # 200, valid cert
+curl 'https://schraeglage-maps.de/api/search?q=Berlin'   # geocoder
 ```
 
 Then in a browser:
@@ -248,7 +255,7 @@ Then in a browser:
   the manifest). iOS: Share → Add to Home Screen.
 - DevTools → Application → Service Workers shows `sw.js` activated.
 
-Share `https://schraeglage.example.com` with friends — done.
+Share `https://schraeglage-maps.de` with friends — done.
 
 ---
 
