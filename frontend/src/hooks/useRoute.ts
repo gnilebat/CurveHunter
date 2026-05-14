@@ -144,6 +144,21 @@ export function useRoute() {
     setWaypointsState(prev => (prev.length > 2 ? prev.filter((_, i) => i !== idx) : prev))
   }, [])
 
+  // Move a waypoint from one position to another (drag-to-reorder in the
+  // panel). Roles follow position — moving the end into the middle just turns
+  // it into a via, which is the expected multi-stop behaviour.
+  const reorderWaypoints = useCallback((from: number, to: number) => {
+    setWaypointsState(prev => {
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
+        return prev
+      }
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }, [])
+
   const setOption = useCallback(<K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => {
     setOptionsState(prev => ({ ...prev, [key]: value }))
   }, [])
@@ -218,7 +233,7 @@ export function useRoute() {
   return {
     waypoints, route, loading, error, options, roundTrip,
     setWaypoint,
-    insertWaypointBefore, insertWaypointAfter, removeWaypoint,
+    insertWaypointBefore, insertWaypointAfter, removeWaypoint, reorderWaypoints,
     setOption, setOptions,
     setRoundTrip, reshuffleRoundTrip,
     selectAlternative,

@@ -16,6 +16,7 @@ import { useSavedRoutes, type SavedRoute } from './hooks/useSavedRoutes'
 import { useCustomPresets, type CustomPreset } from './hooks/useCustomPresets'
 import { useSavedPlaces, type SavedPlace } from './hooks/useSavedPlaces'
 import { useTTS } from './tts/useTTS'
+import { useToast } from './components/Toast'
 import { useLocale } from './i18n/LocaleProvider'
 import { verbKey } from './lib/maneuver'
 import { routeToGpx, downloadGpx, defaultGpxFilename, parseGpx } from './lib/gpx'
@@ -51,13 +52,14 @@ function roundDistance(m: number): { value: number; unit: 'm' | 'km' } {
 export default function App() {
   const {
     waypoints, route, loading, error, options, roundTrip,
-    setWaypoint, insertWaypointAfter, removeWaypoint,
+    setWaypoint, insertWaypointAfter, removeWaypoint, reorderWaypoints,
     setOption, setOptions, setRoundTrip, reshuffleRoundTrip,
     selectAlternative,
     swap, clearAll, loadRoute, prependWaypoint, insertWaypointAt, retry
   } = useRoute()
 
   const tts = useTTS()
+  const toast = useToast()
   const { locale, t } = useLocale()
   const speechLang = locale === 'de' ? 'de-DE' : 'en-US'
 
@@ -187,20 +189,26 @@ export default function App() {
       : 'Schräglage Maps route'
     const gpx = routeToGpx(route, wps, name)
     downloadGpx(defaultGpxFilename(), gpx)
-  }, [route, waypoints])
+    toast(t('toast.gpxExported'))
+  }, [route, waypoints, toast, t])
 
   const handleConfirmSave = useCallback((name: string) => {
     if (!pendingSave) return
     if (pendingSave.kind === 'place') {
       savedPlaces.save(name, pendingSave.lat, pendingSave.lng)
+      toast(t('toast.placeSaved'))
     } else if (pendingSave.kind === 'route') {
       const wps = waypoints.filter((w): w is Waypoint => w !== null)
-      if (wps.length >= 2) savedRoutes.save(name, wps, options)
+      if (wps.length >= 2) {
+        savedRoutes.save(name, wps, options)
+        toast(t('toast.routeSaved'))
+      }
     } else if (pendingSave.kind === 'preset') {
       customPresets.save(name, options)
+      toast(t('toast.presetSaved'))
     }
     setPendingSave(null)
-  }, [pendingSave, waypoints, options, savedRoutes, savedPlaces, customPresets])
+  }, [pendingSave, waypoints, options, savedRoutes, savedPlaces, customPresets, toast, t])
 
   const applySavedRoute = useCallback((r: SavedRoute) => {
     loadRoute(r.waypoints, r.options)
@@ -345,6 +353,7 @@ export default function App() {
           onWaypointChange={setWaypointAndAdvance}
           onInsertAfter={insertWaypointAfter}
           onRemove={removeWaypoint}
+          onReorderWaypoint={reorderWaypoints}
           onOptionChange={setOption}
           onOptionsApply={setOptions}
           onSwap={swap}
@@ -488,7 +497,10 @@ export default function App() {
           <button
             onClick={async () => {
               if (shareUrl) {
-                try { await navigator.clipboard.writeText(shareUrl) } catch { /* ignore */ }
+                try {
+                  await navigator.clipboard.writeText(shareUrl)
+                  toast(t('toast.linkCopied'))
+                } catch { /* clipboard blocked — user can still select the field */ }
               }
             }}
             style={{

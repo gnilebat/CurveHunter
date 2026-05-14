@@ -35,3 +35,9 @@ infra/data/graphhopper/
 # OS
 .DS_Store
 Thumbs.db
+
+# Playwright / E2E
+frontend/.screenshots/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/

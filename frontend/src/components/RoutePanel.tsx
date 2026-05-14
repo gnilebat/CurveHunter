@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
 import type { Waypoint, RouteResult, RouteOptions, SearchResult } from '../types'
 import type { RouteError } from '../hooks/useRoute'
@@ -24,6 +24,7 @@ interface Props {
   onWaypointChange: (idx: number, wp: Waypoint | null) => void
   onInsertAfter: (idx: number) => void
   onRemove: (idx: number) => void
+  onReorderWaypoint: (from: number, to: number) => void
   onOptionChange: <K extends keyof RouteOptions>(key: K, value: RouteOptions[K]) => void
   onOptionsApply: (opts: RouteOptions) => void
   onSwap: () => void
@@ -92,7 +93,7 @@ function formatRoundTripDuration(km: number, t: (k: string) => string): string {
 
 export function RoutePanel({
   waypoints, route, loading, error, options,
-  onWaypointChange, onInsertAfter, onRemove,
+  onWaypointChange, onInsertAfter, onRemove, onReorderWaypoint,
   onOptionChange,
   onOptionsApply,
   onSwap, onClear, onRetry, onStartNavigation,
@@ -111,9 +112,71 @@ export function RoutePanel({
   const [geoLoading, setGeoLoading] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(true)
 
+  // Drag-to-reorder state for the waypoint list. Pointer-based (not HTML5 DnD)
+  // so it works identically with touch. `dragIdx` is the row being dragged,
+  // `dragOverIdx` the drop target. Refs mirror the state so the window-level
+  // listeners (attached on drag start) read fresh values without stale
+  // closures, while the state drives the visual classes.
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const dragIdxRef = useRef<number | null>(null)
+  const dragOverIdxRef = useRef<number | null>(null)
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([])
+
   const isMobile = useIsMobile()
   // Default to options collapsed on mobile so the input section is visible.
   useEffect(() => { if (isMobile) setOptionsOpen(false) }, [isMobile])
+
+  // Which waypoint row sits under a given clientY — drives the drop target.
+  const rowIndexAt = useCallback((clientY: number): number | null => {
+    let best: number | null = null
+    let bestDist = Infinity
+    rowRefs.current.forEach((el, i) => {
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const dist = Math.abs(clientY - (r.top + r.height / 2))
+      if (dist < bestDist) { bestDist = dist; best = i }
+    })
+    return best
+  }, [])
+
+  function onGripPointerDown(e: React.PointerEvent<HTMLButtonElement>, idx: number) {
+    e.preventDefault()
+    dragIdxRef.current = idx
+    dragOverIdxRef.current = idx
+    setDragIdx(idx)
+    setDragOverIdx(idx)
+  }
+
+  // While a drag is active, track the pointer on `window` (not the grip) so
+  // the move/up events fire even though the pointer leaves the small handle.
+  useEffect(() => {
+    if (dragIdx === null) return
+    const onMove = (e: PointerEvent) => {
+      const over = rowIndexAt(e.clientY)
+      if (over !== null) {
+        dragOverIdxRef.current = over
+        setDragOverIdx(over)
+      }
+    }
+    const onUp = () => {
+      const from = dragIdxRef.current
+      const to = dragOverIdxRef.current
+      if (from !== null && to !== null && from !== to) onReorderWaypoint(from, to)
+      dragIdxRef.current = null
+      dragOverIdxRef.current = null
+      setDragIdx(null)
+      setDragOverIdx(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [dragIdx, rowIndexAt, onReorderWaypoint])
 
   const dragState = useRef({ startY: 0, startH: 0, dragging: false })
   const gpxInputRef = useRef<HTMLInputElement>(null)
@@ -311,9 +374,16 @@ export function RoutePanel({
           const isFirst = idx === 0
           const isLast = roundTripEnabled ? true : idx === waypoints.length - 1
           const isIntermediate = !isFirst && !isLast
+          // Reordering only makes sense with 3+ stops in point-to-point mode.
+          const canReorder = !roundTripEnabled && waypoints.length > 2
+          const rowCls = [
+            styles.inputRow,
+            dragIdx === idx ? styles.inputRowDragging : '',
+            dragIdx !== null && dragOverIdx === idx && dragIdx !== idx ? styles.inputRowDropTarget : ''
+          ].filter(Boolean).join(' ')
           return (
             <Fragment key={idx}>
-              <div className={styles.inputRow}>
+              <div className={rowCls} ref={(el) => { rowRefs.current[idx] = el }}>
                 <span className={styles.dot} style={{ background: dotColor(idx) }} />
                 <SearchInput
                   placeholder={placeholderFor(idx)}
@@ -331,6 +401,20 @@ export function RoutePanel({
                     onClick={() => onRemove(idx)}
                     aria-label={t('panel.removeVia')}
                   >×</button>
+                )}
+                {canReorder && (
+                  <button
+                    className={styles.gripBtn}
+                    title={t('panel.reorder')}
+                    aria-label={t('panel.reorder')}
+                    onPointerDown={(e) => onGripPointerDown(e, idx)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+                      <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+                      <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+                    </svg>
+                  </button>
                 )}
               </div>
               {!isLast && (
@@ -576,7 +660,11 @@ export function RoutePanel({
           )}
 
           <div className={styles.routeActionsRow}>
-            <button className={styles.navBtn} onClick={onStartNavigation}>
+            <button
+              className={styles.navBtn}
+              onClick={onStartNavigation}
+              disabled={loading}
+            >
               {t('panel.startNavigation')}
             </button>
             <button

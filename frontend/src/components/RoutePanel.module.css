@@ -289,6 +289,40 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  border-radius: 6px;
+  transition: opacity 0.12s, box-shadow 0.12s;
+}
+
+/* Drag-to-reorder visual states */
+.inputRowDragging {
+  opacity: 0.4;
+}
+.inputRowDropTarget {
+  box-shadow: inset 0 2px 0 var(--accent);  /* insertion line, no layout shift */
+}
+
+.gripBtn {
+  width: 24px;
+  height: 28px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: grab;
+  touch-action: none;          /* let the pointer drag, don't scroll the sheet */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.gripBtn:hover {
+  color: var(--text-muted);
+  background: var(--bg-hover);
+}
+.gripBtn:active {
+  cursor: grabbing;
 }
 
 /* Tight row that sits between two input rows. The + button is positioned at
@@ -814,8 +848,13 @@
   transition: background 0.15s;
 }
 
-.navBtn:hover {
+.navBtn:hover:not(:disabled) {
   background: #15803d;
+}
+
+.navBtn:disabled {
+  background: var(--border-strong);
+  cursor: not-allowed;
 }
 
 .spacer { flex: 1; }

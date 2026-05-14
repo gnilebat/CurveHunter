@@ -186,9 +186,11 @@ export function NavOverlay({
             <span className={styles.etaTime}>—</span>
             <span className={styles.etaSub}>{t('nav.endOfRoute')}</span>
           </div>
-          {simulateButton}
-          {voiceButton}
-          <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
+          <div className={styles.bottomActions}>
+            {simulateButton}
+            {voiceButton}
+            <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
+          </div>
         </div>
       </div>
     )
@@ -210,11 +212,18 @@ export function NavOverlay({
           <div className={styles.primaryText}>
             <div className={styles.bigLine}>{formatNavDistance(distanceToNextTurnM)}</div>
             <div className={styles.smallLine}>
-              <span className={styles.verb}>{verb}</span>
-              {street && (
-                <span className={styles.street}> {t('nav.onto')} {street}</span>
+              {currentInstruction ? (
+                <>
+                  <span className={styles.verb}>{verb}</span>
+                  {street && (
+                    <span className={styles.street}> {t('nav.onto')} {street}</span>
+                  )}
+                </>
+              ) : (
+                // No fix yet — show only the "locating" message, not the
+                // default verb (they used to render jammed together).
+                <span>{t('nav.locating')}</span>
               )}
-              {!currentInstruction && <span>{t('nav.locating')}</span>}
             </div>
           </div>
         </div>
@@ -276,9 +285,11 @@ export function NavOverlay({
             {' · '}{t('nav.etaLabel')} {formatETA(durationRemainingS)}
           </span>
         </div>
-        {simulateButton}
-        {voiceButton}
-        <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
+        <div className={styles.bottomActions}>
+          {simulateButton}
+          {voiceButton}
+          <button className={styles.closeBtn} onClick={onStop} aria-label="Exit">✕</button>
+        </div>
       </div>
     </div>
   )

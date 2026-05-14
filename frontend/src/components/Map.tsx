@@ -5,9 +5,16 @@ import { layers, namedFlavor } from '@protomaps/basemaps'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useLocale } from '../i18n/LocaleProvider'
 import { useTheme } from '../theme/ThemeProvider'
+import { getJSON, setJSON } from '../lib/storage'
 import type { Waypoint, RouteResult } from '../types'
 
 const TILES_URL = (import.meta.env.VITE_TILES_URL as string) || '/tiles/map.pmtiles'
+
+// Last map view (center + zoom) is persisted so a reload picks up where the
+// rider left off instead of always snapping back to the country overview.
+const MAP_VIEW_KEY = 'curvehunter.mapView'
+interface SavedMapView { lng: number; lat: number; zoom: number }
+const DEFAULT_VIEW: SavedMapView = { lng: 10.0, lat: 51.0, zoom: 5 }
 
 const protocol = new Protocol()
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol))
@@ -196,13 +203,19 @@ export function Map({
   const userMarker = useRef<maplibregl.Marker | null>(null)
   const userArrow = useRef<HTMLElement | null>(null)
 
+  // Kept in a ref so the persisted-view listener can read it without
+  // re-subscribing — we don't want to save GPS positions during navigation.
+  const followUserRef = useRef(followUser)
+  followUserRef.current = followUser
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
+    const saved = getJSON<SavedMapView>(MAP_VIEW_KEY, DEFAULT_VIEW)
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: buildMapStyle(locale, theme),
-      center: [10.0, 51.0],
-      zoom: 5
+      center: [saved.lng, saved.lat],
+      zoom: saved.zoom
     })
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
     map.addControl(new maplibregl.GeolocateControl({
@@ -211,6 +224,16 @@ export function Map({
     }), 'top-right')
 
     map.on('load', () => { installRouteLayers(map) })
+
+    // Persist the view after every pan/zoom — except while the follow camera
+    // owns it during navigation, so a reload restores a planning view, not the
+    // last GPS fix.
+    const persistView = () => {
+      if (followUserRef.current) return
+      const c = map.getCenter()
+      setJSON<SavedMapView>(MAP_VIEW_KEY, { lng: c.lng, lat: c.lat, zoom: map.getZoom() })
+    }
+    map.on('moveend', persistView)
 
     mapRef.current = map
 
@@ -242,6 +265,7 @@ export function Map({
     return () => {
       cancelled = true
       map.off('resize', recomputeMinZoom)
+      map.off('moveend', persistView)
       map.remove()
       mapRef.current = null
     }

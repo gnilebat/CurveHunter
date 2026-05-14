@@ -26,6 +26,7 @@ export const strings = {
       addAbove: 'Zwischenziel oberhalb einfügen',
       addBelow: 'Zwischenziel unterhalb einfügen',
       removeVia: 'Zwischenziel entfernen',
+      reorder: 'Zum Verschieben ziehen',
       useMyLocation: 'Aktueller Standort',
       swap: 'Start und Ziel tauschen',
       findRoute: 'Route berechnen',
@@ -93,6 +94,13 @@ export const strings = {
       body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff.',
       install: 'Installieren',
       dismiss: 'Später'
+    },
+    toast: {
+      placeSaved: 'Ort gespeichert',
+      routeSaved: 'Route gespeichert',
+      presetSaved: 'Preset gespeichert',
+      gpxExported: 'GPX-Datei exportiert',
+      linkCopied: 'Link kopiert'
     },
     save: {
       menuTitle: 'Gespeichert',
@@ -211,6 +219,7 @@ export const strings = {
       addAbove: 'Insert waypoint above',
       addBelow: 'Insert waypoint below',
       removeVia: 'Remove waypoint',
+      reorder: 'Drag to reorder',
       useMyLocation: 'Use my location',
       swap: 'Swap start and destination',
       findRoute: 'Find route',
@@ -278,6 +287,13 @@ export const strings = {
       body: 'Add the app to your home screen for quick access.',
       install: 'Install',
       dismiss: 'Later'
+    },
+    toast: {
+      placeSaved: 'Place saved',
+      routeSaved: 'Route saved',
+      presetSaved: 'Preset saved',
+      gpxExported: 'GPX file exported',
+      linkCopied: 'Link copied'
     },
     save: {
       menuTitle: 'Saved',

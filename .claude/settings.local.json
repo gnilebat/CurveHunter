@@ -116,7 +116,14 @@
       "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Packages\" -Recurse -Filter cloudflared.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName)",
       "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\cloudflared\\\\\",\"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue)",
       "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" tunnel --url https://localhost:4173 --no-tls-verify 2>&1)",
-      "Bash(docker stats *)"
+      "Bash(docker stats *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -s -o /dev/null http://localhost:4173)",
+      "Bash(node screenshot.mjs)",
+      "Bash(curl -s -o /dev/null -w \"preview: %{http_code}\\\\n\" http://localhost:4173)",
+      "Bash(rm -f frontend/screenshot.mjs)",
+      "Bash(printf '\\\\n# Playwright / E2E\\\\nfrontend/.screenshots/\\\\nfrontend/playwright-report/\\\\nfrontend/test-results/\\\\nfrontend/blob-report/\\\\n')",
+      "Read(//f/f/projects/CurveHunter/**)"
     ]
   }
 }

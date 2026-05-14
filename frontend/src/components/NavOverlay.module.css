@@ -324,6 +324,16 @@
   min-width: 0;
 }
 
+/* Keep the sim / voice / exit buttons clustered together on the right edge
+   of the bottom panel — without this they get space-between'd individually
+   and drift apart on wide (desktop) layouts. */
+.bottomActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .etaTime {
   font-size: 24px;
   font-weight: 700;

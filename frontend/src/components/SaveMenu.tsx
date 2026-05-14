@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocale } from '../i18n/LocaleProvider'
 import { LOCALES } from '../i18n/strings'
 import { useTheme, THEMES, type Theme } from '../theme/ThemeProvider'
@@ -50,6 +50,17 @@ export function SaveMenu({
   const { theme, setTheme } = useTheme()
   const [tab, setTab] = useState<Tab>('routes')
   const [pending, setPending] = useState<Pending | null>(null)
+
+  // Escape closes the drawer — but only when no rename/delete dialog is open
+  // on top of it (those own Escape while they're up).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !pending) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, pending, onClose])
 
   const handleConfirm = (newName?: string) => {
     if (!pending) return
