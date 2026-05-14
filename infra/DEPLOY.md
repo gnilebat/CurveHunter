@@ -47,6 +47,10 @@ backend + nginx + postgres + Caddy ~0.2 GB, + OS ≈ **~7–8 GB total**. VPS 20
 12 GB leaves a comfortable ~4 GB for OS page cache (the memory-mapped Photon
 index, PMTiles) and traffic burst. 8 GB would be too tight; 12 GB is the spot.
 
+**Testing for free first:** Oracle Cloud Always Free gives an ARM box (up to
+4 cores / 24 GB RAM) **free forever** — it runs this stack comfortably. See
+the alternative in §4; recommended before committing to the paid Contabo box.
+
 ---
 
 ## 3. Domain
@@ -87,6 +91,11 @@ weren't able to add an SSH key at order time).
 > **If you only have a root password:** first get your key onto the box from
 > your local machine — `ssh-copy-id root@<server-ip>` — then continue below.
 > The steps after this disable password login entirely.
+>
+> **On Oracle Cloud** you log in as `ubuntu`, not `root` —
+> `ssh ubuntu@<server-ip>`. That user already has key auth + passwordless
+> sudo, so **skip the "Non-root deploy user" block** below and keep using
+> `ubuntu` — substitute `ubuntu` for `deploy` everywhere else in this guide.
 
 ```bash
 # Patch

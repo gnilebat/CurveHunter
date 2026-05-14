@@ -130,7 +130,9 @@
       "PowerShell(\"exists: $\\(Test-Path 'D:\\\\Docker\\\\photon_data'\\)\"; if \\(Test-Path 'D:\\\\Docker\\\\photon_data'\\) { \"remaining: $\\([math]::Round\\(\\(Get-ChildItem 'D:\\\\Docker\\\\photon_data' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1GB,2\\)\\) GB\" }; \"D: free: $\\([math]::Round\\(\\(Get-PSDrive D\\).Free/1GB,1\\)\\) GB / used: $\\([math]::Round\\(\\(Get-PSDrive D\\).Used/1GB,1\\)\\) GB\")",
       "Bash(powershell -c \"[math]::Round\\(\\(Get-PSDrive D\\).Free/1GB,1\\)\")",
       "Bash(curl -s -o /dev/null http://localhost/api/search?q=__TRACKED_VAR__)",
-      "Bash(curl -s -o /dev/null -X POST http://localhost/api/route -H 'Content-Type: application/json' -d '{\"waypoints\":__TRACKED_VAR__,\"options\":{},\"alternatives\":true}')"
+      "Bash(curl -s -o /dev/null -X POST http://localhost/api/route -H 'Content-Type: application/json' -d '{\"waypoints\":__TRACKED_VAR__,\"options\":{},\"alternatives\":true}')",
+      "PowerShell(winget install --id Oracle.OCI-CLI --accept-source-agreements --accept-package-agreements --silent 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\Oracle\\\\oci_cli\\\\oci.exe\" iam region list --query \"data[?\\\\\"region-name\\\\\"=='eu-frankfurt-1']\" 2>&1)"
     ]
   }
 }
