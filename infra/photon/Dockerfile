@@ -24,6 +24,8 @@ WORKDIR /photon
 EXPOSE 2322
 
 # Default = SERVE mode: Photon opens ./photon_data and serves the API on
-# :2322. The import stack overrides this with `-nominatim-import ...`.
+# :2322. `-listen-ip 0.0.0.0` is required — Photon otherwise binds 127.0.0.1
+# and the backend container can't reach it across the Docker network.
+# The import stack overrides this CMD with `-nominatim-import ...`.
 ENTRYPOINT ["java", "-jar", "/photon/photon.jar"]
-CMD []
+CMD ["-listen-ip", "0.0.0.0"]

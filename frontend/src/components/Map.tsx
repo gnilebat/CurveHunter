@@ -59,9 +59,6 @@ interface Props {
   /** Bottom area of the viewport covered by a UI panel (e.g. the bottom-sheet).
       Clamped at ~50vh — used for map-centering padding. */
   bottomInset?: number
-  /** Actual full height of the bottom sheet (mobile). Unclamped — used to keep
-      floating map controls clear above the sheet. 0 on desktop / in nav mode. */
-  bottomSheetHeight?: number
   /** When auto-zoom is on, the follow camera picks a zoom level based on the
       current edge's speed limit (smaller streets → closer in). */
   autoZoom?: boolean
@@ -184,13 +181,32 @@ function installRouteLayers(map: maplibregl.Map): void {
   }
 }
 
+// MapLibre's fitBounds silently no-ops ("cannot fit within canvas") when the
+// padding eats too much of the viewport — bottomInset (the mobile bottom-sheet
+// height) can be ~half the canvas. Clamp every value so the fit region stays
+// generous on every viewport.
+function clampedFitPadding(
+  map: maplibregl.Map,
+  bottomInset: number
+): maplibregl.PaddingOptions {
+  const cs = map.getCanvas()
+  const h = cs.clientHeight || 600
+  const w = cs.clientWidth || 600
+  const side = Math.min(40, w * 0.12)
+  return {
+    top: 40,
+    bottom: Math.min(40 + bottomInset, h * 0.42),
+    left: side,
+    right: side
+  }
+}
+
 export function Map({
   waypoints, route, onMapClick, onWaypointDragEnd, onRouteDragInsert,
   onAlternativeSelect,
   followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
   bottomInset = 0,
-  bottomSheetHeight = 0,
   autoZoom = false, onToggleAutoZoom,
   currentMaxSpeed = 0
 }: Props) {
@@ -236,6 +252,8 @@ export function Map({
     map.on('moveend', persistView)
 
     mapRef.current = map
+    // Debug / E2E hook — lets tests assert camera moves (fit-route, recentre).
+    ;(window as Window & { __chMap?: maplibregl.Map }).__chMap = map
 
     // Clamp min-zoom + max-bounds to the actual tile coverage, so the user
     // can't zoom/pan past the edge of the map data into the grey void.
@@ -506,7 +524,7 @@ export function Map({
       new maplibregl.LngLatBounds([set[0].lng, set[0].lat], [set[0].lng, set[0].lat])
     )
     map.fitBounds(b, {
-      padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+      padding: clampedFitPadding(map, bottomInset),
       maxZoom: 13,
       duration: 400
     })
@@ -591,7 +609,7 @@ export function Map({
           }
         }
         map.fitBounds(bounds, {
-          padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+          padding: clampedFitPadding(map, bottomInset),
           maxZoom: 14
         })
       }
@@ -798,7 +816,7 @@ export function Map({
       }
     }
     m.fitBounds(bounds, {
-      padding: { top: 60, right: 60, left: 60, bottom: 60 + bottomInset },
+      padding: clampedFitPadding(m, bottomInset),
       maxZoom: 14,
       duration: 500
     })
@@ -808,14 +826,12 @@ export function Map({
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Fit-route button — full-size thumb-reachable button in the bottom-right
-          (not a cramped 29px square under MapLibre's controls). Rides just
-          above the ACTUAL bottom-sheet edge (bottomSheetHeight, not the
-          50vh-clamped bottomInset) and clears the home indicator via the
-          safe-area inset. Hidden in nav mode, and hidden once the sheet covers
-          most of the screen — at that point there's no map left to fit. */}
-      {!followUser && route &&
-       bottomSheetHeight < (typeof window !== 'undefined' ? window.innerHeight * 0.6 : 1e9) && (
+      {/* Fit-route button — anchored top-right, just below MapLibre's own
+          controls. Fixed position (not riding the bottom-sheet edge) so it
+          never overlaps the sheet's drag handle — that overlap made mobile
+          taps unreliable, getting eaten by the resize gesture. `touchAction:
+          manipulation` also drops the mobile tap delay. */}
+      {!followUser && route && (
         <button
           onClick={fitRoute}
           aria-label="Fit route to view"
@@ -823,9 +839,10 @@ export function Map({
           style={{
             ...navButtonStyle,
             position: 'absolute',
-            right: 16,
-            bottom: `calc(${bottomSheetHeight + 16}px + env(safe-area-inset-bottom))`,
-            zIndex: 25
+            right: 12,
+            top: 'calc(150px + env(safe-area-inset-top))',
+            zIndex: 25,
+            touchAction: 'manipulation'
           }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

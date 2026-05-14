@@ -175,6 +175,47 @@ test('exposes GPX export and share once a route exists', async ({ page }) => {
   await expect(page.getByTitle('Als GPX exportieren')).toBeVisible()
 })
 
+test('fit-route button is reachable and moves the camera', async ({ page }) => {
+  await page.goto('/')
+  await pickPlace(page, /Startpunkt/)
+  await pickPlace(page, /Zielort/)
+  await expect(page.locator('[class*="stats"]').first()).toBeVisible({ timeout: 8000 })
+
+  const fitBtn = page.getByRole('button', { name: 'Fit route to view' })
+  await expect(fitBtn).toBeVisible()
+
+  type MapWin = Window & {
+    __chMap?: {
+      getZoom(): number
+      getCenter(): { lng: number; lat: number }
+      jumpTo(o: { center: [number, number]; zoom: number }): void
+    }
+  }
+  const read = () => page.evaluate(() => {
+    const m = (window as MapWin).__chMap!
+    return { z: m.getZoom(), lng: m.getCenter().lng, lat: m.getCenter().lat }
+  })
+
+  // Deliberately pan far from the route (mock route is around München) so a
+  // working fit-route button has to make a large, unambiguous camera move.
+  await page.evaluate(() => {
+    (window as MapWin).__chMap!.jumpTo({ center: [9.99, 53.55], zoom: 11 })
+  })
+  await page.waitForTimeout(200)
+  const before = await read()
+
+  // .click() also runs Playwright's actionability checks — fails if the
+  // button is covered / untappable.
+  await fitBtn.click()
+  await page.waitForTimeout(900)  // fitBounds animation is 500ms
+  const after = await read()
+
+  const moved =
+    Math.abs(after.lng - before.lng) > 0.5 ||
+    Math.abs(after.lat - before.lat) > 0.5
+  expect(moved, 'tapping fit-route should jump the camera back to the route').toBeTruthy()
+})
+
 test('bottom sheet drags up and down', async ({ page }, testInfo) => {
   await page.goto('/')
   test.skip(!(await isSheetLayout(page)), 'side-panel layout — no bottom sheet')

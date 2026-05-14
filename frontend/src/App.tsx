@@ -261,12 +261,6 @@ export default function App() {
       ? Math.min(panelHeight, typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400)
       : 0
 
-  // Actual on-screen height of the bottom sheet (mobile, non-nav). Distinct
-  // from bottomInset, which is clamped at 50vh for map-centering — this is the
-  // real height, so floating map controls can sit clear above the sheet even
-  // when it's dragged up past 50%.
-  const bottomSheetHeight = isMobile && !nav.active ? panelHeight : 0
-
   // When navigation stops, close + reset the preview simulator so it doesn't
   // keep advancing in the background (which was also feeding stale off-route
   // cues to TTS).
@@ -397,7 +391,6 @@ export default function App() {
           dimUrbanSegments={options.ignoreUrbanCurves}
           dimBelowSpeedSegments={options.minCurveSpeed > 0}
           bottomInset={bottomInset}
-          bottomSheetHeight={bottomSheetHeight}
           autoZoom={autoZoom}
           onToggleAutoZoom={toggleAutoZoom}
           currentMaxSpeed={nav.currentMaxSpeed}
