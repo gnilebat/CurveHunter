@@ -779,31 +779,25 @@ export function Map({
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Sits under MapLibre's NavigationControl + GeolocateControl in the
-          top-right column. Visible only when there is a route to fit and we
-          aren't already following the user (in nav mode the bottom stack
-          owns the camera). */}
+      {/* Fit-route button — full-size thumb-reachable button in the bottom-right
+          (not a cramped 29px square under MapLibre's controls). Rides just
+          above the bottom-sheet edge on mobile via bottomInset, and clears the
+          home-indicator via the safe-area inset. Hidden in nav mode — the
+          follow-camera stack owns that corner then. */}
       {!followUser && route && (
         <button
           onClick={fitRoute}
           aria-label="Fit route to view"
           title="Fit route to view"
           style={{
+            ...navButtonStyle,
             position: 'absolute',
-            top: 'calc(140px + env(safe-area-inset-top))',
-            right: 10,
-            width: 29, height: 29,
-            borderRadius: 4,
-            border: 'none',
-            background: '#fff',
-            color: '#333',
-            boxShadow: '0 0 0 2px rgba(0,0,0,0.1)',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 5
+            right: 16,
+            bottom: `calc(${bottomInset + 16}px + env(safe-area-inset-bottom))`,
+            zIndex: 25
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 9V4h5" />
             <path d="M20 9V4h-5" />
             <path d="M4 15v5h5" />
@@ -817,7 +811,7 @@ export function Map({
           style={{
             position: 'absolute',
             right: 16,
-            bottom: 96,
+            bottom: 'calc(96px + env(safe-area-inset-bottom))',
             display: 'flex',
             flexDirection: 'column',
             gap: 8,
