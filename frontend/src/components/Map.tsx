@@ -181,10 +181,13 @@ function installRouteLayers(map: maplibregl.Map): void {
   }
 }
 
-// MapLibre's fitBounds silently no-ops ("cannot fit within canvas") when the
-// padding eats too much of the viewport — bottomInset (the mobile bottom-sheet
-// height) can be ~half the canvas. Clamp every value so the fit region stays
-// generous on every viewport.
+// Padding for fitBounds. `bottomInset` (the mobile bottom-sheet height) is
+// added to the bottom so the route lands above the sheet — BUT it's capped at
+// 40% of the canvas height. Without the cap, on a tall narrow phone the route
+// gets squeezed into a thin strip above the sheet and fitBounds zooms out
+// absurdly far (and past ~50% MapLibre silently no-ops, "cannot fit within
+// canvas"). With the cap the route always fills a generous area; a little
+// route overlap behind the sheet is the accepted trade-off.
 function clampedFitPadding(
   map: maplibregl.Map,
   bottomInset: number
@@ -194,8 +197,8 @@ function clampedFitPadding(
   const w = cs.clientWidth || 600
   const side = Math.min(40, w * 0.12)
   return {
-    top: 40,
-    bottom: Math.min(40 + bottomInset, h * 0.42),
+    top: 50,
+    bottom: Math.min(50 + bottomInset, h * 0.4),
     left: side,
     right: side
   }
@@ -687,11 +690,15 @@ export function Map({
   // height change so the visible-area centre stays roughly steady. No zoom
   // change, no re-fit — just a slight follow. Skipped during navigation
   // (camera is locked to the user).
+  //
+  // Note: we deliberately do NOT call map.setPadding() here. A persistent
+  // padding compounds unpredictably with the per-call padding that fitBounds
+  // already passes — that double-counting was over-zooming the route on
+  // mobile. Each camera op now owns its padding explicitly.
   const prevInset = useRef(bottomInset)
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    map.setPadding({ top: 0, right: 0, left: 0, bottom: bottomInset })
     if (followUser) { prevInset.current = bottomInset; return }
     const delta = bottomInset - prevInset.current
     prevInset.current = bottomInset

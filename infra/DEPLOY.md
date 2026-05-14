@@ -37,13 +37,15 @@ come from `docker-compose.prod.yml`.
 | Item | Choice | Cost |
 |---|---|---|
 | Domain | `schraeglage-maps.de` — Namecheap | €5.97 / year (paid) |
-| Server | **Hetzner Cloud CX42** — 8 vCPU, 16 GB RAM, 160 GB SSD | ~€13.49 / month |
+| Server | **Contabo Cloud VPS 20** — 6 vCPU, 12 GB RAM, 100 GB NVMe, EU | ~€8–11 / month (12-month prepay) |
 | TLS certificate | Let's Encrypt via Caddy | free |
-| **Total** | | **~€14 / month** |
+| **Total** | | **~€9–12 / month** |
 
-A CX32 (8 GB) also works but is tight — see the GraphHopper note in
-`docker-compose.prod.yml`. For friends-scale testing, CX42 is the comfortable
-pick.
+**Sizing:** the full Germany stack was measured warmed (10 cross-country
+routes + searches): GraphHopper ~5.9 GB (`-Xmx6g` cap), Photon ~0.6 GB,
+backend + nginx + postgres + Caddy ~0.2 GB, + OS ≈ **~7–8 GB total**. VPS 20's
+12 GB leaves a comfortable ~4 GB for OS page cache (the memory-mapped Photon
+index, PMTiles) and traffic burst. 8 GB would be too tight; 12 GB is the spot.
 
 ---
 
@@ -60,23 +62,31 @@ stays at Namecheap.)
 
 ---
 
-## 4. Provision the Hetzner server
+## 4. Provision the Contabo server
 
-1. Create a Hetzner Cloud account → new project → **Add Server**.
+1. Order a **Cloud VPS 20** at <https://contabo.com> (6 vCPU, 12 GB RAM,
+   100 GB NVMe).
 2. Settings:
-   - **Location:** Falkenstein or Nuremberg (low latency to German users)
+   - **Region:** EU / Germany (Nuremberg) — low latency for German users
    - **Image:** Ubuntu 24.04
-   - **Type:** CX42
-   - **SSH key:** add your public key (`~/.ssh/id_ed25519.pub`) — do *not*
-     use password auth
-   - **Name:** `schraeglage`
-3. Create it. Note the public **IPv4 address**.
+   - **Login:** add your SSH public key (`~/.ssh/id_ed25519.pub`) if Contabo
+     offers it; otherwise you'll get a root password and switch to key auth
+     in step 5
+   - **Period:** the cheap price needs a 12-month prepay — pick the term you want
+3. Provisioning can take minutes to a few hours (Contabo runs a manual fraud
+   check on new accounts). You'll receive the **IPv4 address** + root
+   credentials by email.
 
 ---
 
 ## 5. First-boot server hardening
 
-SSH in as root: `ssh root@<server-ip>`
+SSH in as root — `ssh root@<server-ip>` (use the emailed password if you
+weren't able to add an SSH key at order time).
+
+> **If you only have a root password:** first get your key onto the box from
+> your local machine — `ssh-copy-id root@<server-ip>` — then continue below.
+> The steps after this disable password login entirely.
 
 ```bash
 # Patch
@@ -139,8 +149,8 @@ cd /opt/curvehunter/infra
 | Germany OSM PBF (for GraphHopper) | `infra/data/osm/map.osm.pbf` | <https://download.geofabrik.de/europe/germany-latest.osm.pbf> | ~4.5 GB |
 | Photon index | `infra/photon-index/` | **built locally** — see `GEOCODER.md` | ~6–8 GB |
 
-Download PMTiles + OSM PBF straight onto the server with `wget` (Hetzner
-ingress is free and fast). The Photon index you build on your machine and
+Download PMTiles + OSM PBF straight onto the server with `wget` (inbound
+traffic is free on Contabo). The Photon index you build on your machine and
 push with `scripts/push-geocoder.sh` (step 10).
 
 ```bash
@@ -237,6 +247,16 @@ First start is slow: GraphHopper imports the OSM graph (~5–10 min, watch
 `docker compose logs -f graphhopper`). Caddy fetches the TLS cert within
 seconds once DNS resolves.
 
+> **On 12 GB, the first GraphHopper import can be tight** if everything starts
+> at once. If GraphHopper gets OOM-killed mid-import, bring it up alone first,
+> let it finish, then start the rest:
+> ```bash
+> docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d graphhopper
+> # wait for "healthy": docker compose ps
+> docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile geocoder up -d --build
+> ```
+> Once the graph cache is built, normal startup uses far less memory.
+
 ---
 
 ## 11. Verify
@@ -298,8 +318,9 @@ The only state worth backing up is small:
   it; until then there's nothing to lose
 
 Everything else (PMTiles, OSM PBF, Photon index, GraphHopper graph) is
-re-downloadable or re-buildable. A Hetzner snapshot (~€0.01/GB/month) of the
-whole server once it's set up is the simplest insurance.
+re-downloadable or re-buildable. A whole-server snapshot once it's set up is
+the simplest insurance — Contabo offers **Auto Backup** as a cheap add-on, or
+take a manual snapshot from the control panel before big changes.
 
 ---
 

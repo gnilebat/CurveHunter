@@ -34,9 +34,10 @@ services:
   backend:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
-  # GraphHopper memory: tuned to leave room for Photon (~3 GB) + Postgres +
-  # nginx + Caddy on a 16 GB CX42. On an 8 GB CX32 drop this to ~3g and
-  # expect a slower first-start graph import.
+  # GraphHopper memory: -Xmx6g is sized for a 12 GB box (Contabo VPS 20).
+  # Measured warmed footprint: GraphHopper ~5.9 GB, Photon ~0.6 GB, everything
+  # else + OS ~1.5 GB → ~8 GB, leaving ~4 GB for page cache. On a smaller 8 GB
+  # box drop this to ~4g (Germany serving still fits; slightly more GC).
   graphhopper:
     environment:
       JAVA_OPTS: -Xmx6g -Xms1g
