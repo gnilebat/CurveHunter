@@ -1,0 +1,11 @@
+# LOCAL DEV ONLY. Docker Compose auto-loads this file on a plain
+# `docker compose up`, so local behaviour is unchanged: nginx is published on
+# :80 and the Vite dev server (frontend/vite.config.ts) proxies /api and
+# /tiles to it.
+#
+# On the server you DON'T use this file — you pass docker-compose.prod.yml
+# explicitly, which puts Caddy in front as the only public entrypoint.
+services:
+  nginx:
+    ports:
+      - "80:80"

@@ -1,0 +1,46 @@
+# Production overrides. On the server, bring the stack up with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#                  --profile geocoder up -d --build
+#
+# What this adds on top of the base file:
+#   - Caddy as the public entrypoint (ports 80/443, automatic Let's Encrypt TLS)
+#   - nginx demoted to internal-only (Caddy reverse-proxies to it)
+#   - backend without --reload
+#   - GraphHopper memory tuned for a 16 GB box (CX42); adjust for your server
+#
+# Requires DOMAIN and ACME_EMAIL set in infra/.env (see .env.example).
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data        # persisted TLS certificates — do not wipe
+      - caddy-config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    depends_on:
+      - nginx
+
+  # Production: drop the dev --reload flag. The source bind mount from the
+  # base file still applies and just points at the deployed repo checkout.
+  backend:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # GraphHopper memory: tuned to leave room for Photon (~3 GB) + Postgres +
+  # nginx + Caddy on a 16 GB CX42. On an 8 GB CX32 drop this to ~3g and
+  # expect a slower first-start graph import.
+  graphhopper:
+    environment:
+      JAVA_OPTS: -Xmx6g -Xms1g
+
+volumes:
+  caddy-data:
+  caddy-config:
