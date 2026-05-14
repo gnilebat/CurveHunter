@@ -1,0 +1,77 @@
+# ══════════════════════════════════════════════════════════════════════════
+# LOCAL-ONLY Photon index build stack.  DO NOT deploy this to the server.
+#
+# Builds a fresh Germany-only Photon index from current Geofabrik data. The
+# heavy part (Nominatim) runs only here, on your dev machine; the server only
+# ever serves the small finished index.
+#
+# Needs on the build machine: ~16 GB RAM (8 GB works but slow), ~60 GB free
+# disk during the run. The Nominatim DB is thrown away afterwards.
+#
+# ── Procedure ──────────────────────────────────────────────────────────────
+#   1. Download germany-latest.osm.pbf  (see GEOCODER.md for the link)
+#      → place it at  infra/import/pbf/germany-latest.osm.pbf
+#
+#   2. Import OSM into Nominatim (1–3 h, unattended):
+#        docker compose -f docker-compose.import.yml up nominatim
+#      Wait until the logs settle on "Nominatim is ready to accept requests".
+#      Leave it running for the next step.
+#
+#   3. Build the Photon index from that DB (~20–40 min):
+#        docker compose -f docker-compose.import.yml run --rm photon-import
+#      The fresh index is written to  infra/photon-index/  (contains node_1/).
+#
+#   4. Tear the build stack down and reclaim the ~40 GB Nominatim DB:
+#        docker compose -f docker-compose.import.yml down -v
+#
+#   5. Ship it to the server:
+#        ./scripts/push-geocoder.sh
+# ══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # Temporary Nominatim — only needed while building the index. The mediagis
+  # image imports the PBF on first start, then serves an API we don't use
+  # (Photon talks straight to its Postgres DB).
+  nominatim:
+    image: mediagis/nominatim:4.4
+    shm_size: 1g
+    environment:
+      PBF_PATH: /nominatim/data/germany-latest.osm.pbf
+      # `address` style = addresses + named POIs. Smaller and faster to import
+      # than the full style, and it's all Photon needs for autocomplete.
+      IMPORT_STYLE: address
+      # Photon connects to this Postgres with user `nominatim` / this password.
+      NOMINATIM_PASSWORD: photon_import
+      THREADS: 4
+    volumes:
+      - ./import/pbf:/nominatim/data
+    ports:
+      - "8001:8080"   # Nominatim's own API (unused, handy for sanity checks)
+
+  # Photon in IMPORT mode — reads the Nominatim DB, writes the search index
+  # into ./photon-index. Same image the server serves with, so the index is
+  # guaranteed compatible. Run with `run --rm` once Nominatim is ready.
+  photon-import:
+    build:
+      context: ./photon
+    depends_on:
+      - nominatim
+    command:
+      - -nominatim-import
+      - -host
+      - nominatim
+      - -port
+      - "5432"
+      - -database
+      - nominatim
+      - -user
+      - nominatim
+      - -password
+      - photon_import
+      - -languages
+      - de,en
+    volumes:
+      # Import writes here; this is the exact folder push-geocoder.sh ships and
+      # the server bind-mounts. Will contain a `node_1/` subdirectory when done.
+      - ./photon-index:/photon/photon_data

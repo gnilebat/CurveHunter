@@ -20,6 +20,13 @@ infra/data/osm/*.osm
 infra/data/dem/*.tif
 infra/data/dem/*.tiff
 
+# Geocoder build inputs/outputs (see infra/GEOCODER.md) — keep the dirs,
+# ignore their (large) contents.
+infra/import/pbf/*
+!infra/import/pbf/.gitkeep
+infra/photon-index/*
+!infra/photon-index/.gitkeep
+
 # Docker volumes (if bind-mounted locally)
 infra/data/postgres/
 infra/data/nominatim/

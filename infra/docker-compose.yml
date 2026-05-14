@@ -55,20 +55,20 @@ services:
       start_period: 180s
 
   # ── Photon geocoder (autocomplete) ───────────────────────────────────────────
-  # Uses komoot/photon's pre-built index (downloaded by an external script into
-  # D:\Docker\photon_data). No import step at container start — Photon just
-  # opens the ES index. Container is small and starts in <60s once the index
-  # is on disk. Bring up manually with `docker compose up -d photon`.
+  # Serves a Germany-only Photon index that YOU build locally from current
+  # Geofabrik data (see docker-compose.import.yml + GEOCODER.md), then push
+  # here with scripts/push-geocoder.sh. No download/import at container start —
+  # Photon just opens the index and serves. Starts in <60s.
+  #
+  # Bring up manually:  docker compose --profile geocoder up -d photon
   photon:
-    image: rtuszik/photon-docker:latest
+    build:
+      context: ./photon
     restart: unless-stopped
-    environment:
-      # Don't auto-download — we drop the pre-built Germany index into the
-      # bind-mounted folder ourselves.
-      UPDATE_STRATEGY: NEVER
-      FORCE_UPDATE: "false"
     volumes:
-      - photon-data:/photon/data
+      # Drop the pre-built Germany index here. The folder must directly
+      # contain Photon's `node_1/` subdirectory.
+      - ./photon-index:/photon/photon_data
     profiles: ["geocoder"]   # don't start with the default `docker compose up`
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:2322/api?q=ping >/dev/null || exit 1"]
@@ -97,12 +97,5 @@ volumes:
   postgres-data:
   graphhopper-cache:
   elevation-cache:
-  # Photon's ~12 GB Elasticsearch index lives at D:\Docker\photon_data — it's
-  # extracted from the pre-built tarball downloaded from graphhopper.com.
-  # The path inside the bind target must contain a `node_1/` subdirectory.
-  photon-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: D:/Docker/photon_data
+  # Note: the Photon index is a plain bind mount (./photon-index), not a named
+  # volume — it's a build artifact you rsync in, not container-managed state.
