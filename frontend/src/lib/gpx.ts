@@ -24,7 +24,7 @@ export function routeToGpx(route: RouteResult, waypoints: Waypoint[], name: stri
   }).join('\n')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Schräglage" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Schräglage Maps" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(name)}</name>
     <time>${time}</time>

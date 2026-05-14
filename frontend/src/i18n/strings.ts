@@ -9,7 +9,7 @@
 export const strings = {
   de: {
     panel: {
-      brand: 'Schräglage',
+      brand: 'Schräglage Maps',
       modeDirect: 'A → B',
       modeRoundTrip: 'Rundkurs',
       roundTripDistance: 'Distanz',
@@ -85,11 +85,11 @@ export const strings = {
     },
     share: {
       title: 'Route teilen',
-      body: 'Mit diesem Link kann jeder die Route direkt in Schräglage öffnen.',
+      body: 'Mit diesem Link kann jeder die Route direkt in Schräglage Maps öffnen.',
       copy: 'Kopieren'
     },
     pwa: {
-      title: 'Schräglage installieren',
+      title: 'Schräglage Maps installieren',
       body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff.',
       install: 'Installieren',
       dismiss: 'Später'
@@ -194,7 +194,7 @@ export const strings = {
 
   en: {
     panel: {
-      brand: 'Schräglage',
+      brand: 'Schräglage Maps',
       modeDirect: 'A → B',
       modeRoundTrip: 'Loop',
       roundTripDistance: 'Distance',
@@ -270,11 +270,11 @@ export const strings = {
     },
     share: {
       title: 'Share route',
-      body: 'Anyone with this link can open the same route in Schräglage.',
+      body: 'Anyone with this link can open the same route in Schräglage Maps.',
       copy: 'Copy'
     },
     pwa: {
-      title: 'Install Schräglage',
+      title: 'Install Schräglage Maps',
       body: 'Add the app to your home screen for quick access.',
       install: 'Install',
       dismiss: 'Later'

@@ -1,4 +1,4 @@
-// Schräglage service worker.
+// Schräglage Maps service worker.
 // Strategy:
 //   - Network-first for navigation (HTML) with cache fallback → user always
 //     gets the latest UI when online, still loads offline if available.

@@ -115,7 +115,8 @@
       "PowerShell(cloudflared --version)",
       "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Microsoft\\\\WinGet\\\\Packages\" -Recurse -Filter cloudflared.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName)",
       "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\cloudflared\\\\\",\"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\\\\cloudflared\\\\\" -ErrorAction SilentlyContinue)",
-      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" tunnel --url https://localhost:4173 --no-tls-verify 2>&1)"
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" tunnel --url https://localhost:4173 --no-tls-verify 2>&1)",
+      "Bash(docker stats *)"
     ]
   }
 }
