@@ -49,8 +49,12 @@ interface Props {
   userPos?: UserPos | null
   dimUrbanSegments?: boolean
   dimBelowSpeedSegments?: boolean
-  /** Bottom area of the viewport covered by a UI panel (e.g. the bottom-sheet). */
+  /** Bottom area of the viewport covered by a UI panel (e.g. the bottom-sheet).
+      Clamped at ~50vh — used for map-centering padding. */
   bottomInset?: number
+  /** Actual full height of the bottom sheet (mobile). Unclamped — used to keep
+      floating map controls clear above the sheet. 0 on desktop / in nav mode. */
+  bottomSheetHeight?: number
   /** When auto-zoom is on, the follow camera picks a zoom level based on the
       current edge's speed limit (smaller streets → closer in). */
   autoZoom?: boolean
@@ -179,6 +183,7 @@ export function Map({
   followUser, userPos,
   dimUrbanSegments, dimBelowSpeedSegments,
   bottomInset = 0,
+  bottomSheetHeight = 0,
   autoZoom = false, onToggleAutoZoom,
   currentMaxSpeed = 0
 }: Props) {
@@ -781,10 +786,12 @@ export function Map({
 
       {/* Fit-route button — full-size thumb-reachable button in the bottom-right
           (not a cramped 29px square under MapLibre's controls). Rides just
-          above the bottom-sheet edge on mobile via bottomInset, and clears the
-          home-indicator via the safe-area inset. Hidden in nav mode — the
-          follow-camera stack owns that corner then. */}
-      {!followUser && route && (
+          above the ACTUAL bottom-sheet edge (bottomSheetHeight, not the
+          50vh-clamped bottomInset) and clears the home indicator via the
+          safe-area inset. Hidden in nav mode, and hidden once the sheet covers
+          most of the screen — at that point there's no map left to fit. */}
+      {!followUser && route &&
+       bottomSheetHeight < (typeof window !== 'undefined' ? window.innerHeight * 0.6 : 1e9) && (
         <button
           onClick={fitRoute}
           aria-label="Fit route to view"
@@ -793,7 +800,7 @@ export function Map({
             ...navButtonStyle,
             position: 'absolute',
             right: 16,
-            bottom: `calc(${bottomInset + 16}px + env(safe-area-inset-bottom))`,
+            bottom: `calc(${bottomSheetHeight + 16}px + env(safe-area-inset-bottom))`,
             zIndex: 25
           }}
         >
