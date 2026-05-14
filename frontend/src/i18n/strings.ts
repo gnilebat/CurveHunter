@@ -160,7 +160,8 @@ export const strings = {
         nowVerb: 'Jetzt {verb}{onto}',
         ontoStreet: ' auf {street}',
         arrive: 'Ziel erreicht',
-        offRoute: 'Du bist nicht auf der Route'
+        offRoute: 'Du bist nicht auf der Route',
+        viaReached: 'Zwischenziel erreicht — weiter zur nächsten Etappe'
       },
       unitM: 'Meter',
       unitKm: 'Kilometer',
@@ -191,6 +192,7 @@ export const strings = {
         sharpRight: 'Scharf rechts',
         sharpLeft: 'Scharf links',
         arrive: 'Ziel erreicht',
+        viaReached: 'Zwischenziel',
         roundabout: 'In den Kreisverkehr fahren',
         keepRight: 'Rechts halten',
         keepLeft: 'Links halten',
@@ -353,7 +355,8 @@ export const strings = {
         nowVerb: '{verb} now{onto}',
         ontoStreet: ' onto {street}',
         arrive: "You've arrived",
-        offRoute: "You're off the route"
+        offRoute: "You're off the route",
+        viaReached: 'Waypoint reached — continuing to the next leg'
       },
       unitM: 'metres',
       unitKm: 'kilometres',
@@ -384,6 +387,7 @@ export const strings = {
         sharpRight: 'Sharp right',
         sharpLeft: 'Sharp left',
         arrive: 'Arrive',
+        viaReached: 'Waypoint',
         roundabout: 'Take roundabout',
         keepRight: 'Keep right',
         keepLeft: 'Keep left',

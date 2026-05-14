@@ -38,6 +38,7 @@ function verbKey(sign: number): string {
     case 2: return sign > 0 ? 'turnRight' : 'turnLeft'
     case 3: return sign > 0 ? 'sharpRight' : 'sharpLeft'
     case 4: return 'arrive'
+    case 5: return 'viaReached'
     case 6: return 'roundabout'
     case 7: return sign > 0 ? 'keepRight' : 'keepLeft'
     case 8: return 'uTurn'

@@ -223,6 +223,7 @@ export default function App() {
   const composeCue = useCallback((cue: NavCue): string | null => {
     if (cue.kind === 'arrive') return t('nav.cue.arrive')
     if (cue.kind === 'offRoute') return t('nav.cue.offRoute')
+    if (cue.kind === 'via') return t('nav.cue.viaReached')
     if (cue.sign === undefined) return null
 
     const verbRaw = t(`nav.verb.${verbKey(cue.sign)}`)
