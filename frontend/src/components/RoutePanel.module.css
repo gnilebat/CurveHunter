@@ -111,29 +111,48 @@
   gap: 8px;
 }
 
-.menuBtn {
+.headerActions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.menuBtn,
+.infoBtn {
   width: 40px;
   height: 40px;
-  margin-left: auto;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 8px rgba(77, 124, 223, 0.35);
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
 }
-.menuBtn:hover {
+.menuBtn:hover,
+.infoBtn:hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
-  box-shadow: 0 5px 12px rgba(77, 124, 223, 0.45);
 }
-.menuBtn:active { transform: translateY(0); }
+.menuBtn:active,
+.infoBtn:active { transform: translateY(0); }
 .menuBtn svg { width: 22px; height: 22px; stroke-width: 2.4; }
+
+.menuBtn {
+  background: linear-gradient(135deg, var(--secondary), var(--secondary-hover));
+  box-shadow: 0 3px 8px rgba(77, 124, 223, 0.35);
+}
+.menuBtn:hover { box-shadow: 0 5px 12px rgba(77, 124, 223, 0.45); }
+
+/* Accent (amber) so the help icon reads as distinct from the navy menu. */
+.infoBtn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35);
+}
+.infoBtn:hover { box-shadow: 0 5px 12px rgba(245, 158, 11, 0.45); }
 
 .logoIcon {
   display: inline-flex;

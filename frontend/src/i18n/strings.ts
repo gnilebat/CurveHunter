@@ -89,6 +89,9 @@ export const strings = {
       body: 'Mit diesem Link kann jeder die Route direkt in Schräglage Maps öffnen.',
       copy: 'Kopieren'
     },
+    info: {
+      title: 'Anleitung & Funktionen'
+    },
     pwa: {
       title: 'Schräglage Maps installieren',
       body: 'App zum Startbildschirm hinzufügen für schnellen Zugriff.',
@@ -283,6 +286,9 @@ export const strings = {
       title: 'Share route',
       body: 'Anyone with this link can open the same route in Schräglage Maps.',
       copy: 'Copy'
+    },
+    info: {
+      title: 'Help & features'
     },
     pwa: {
       title: 'Install Schräglage Maps',

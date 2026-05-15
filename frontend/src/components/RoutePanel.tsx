@@ -9,6 +9,7 @@ import {
 } from '../types'
 import { SearchInput } from './SearchInput'
 import { Slider } from './Slider'
+import { InfoModal } from './InfoModal'
 import { StepSlider } from './StepSlider'
 import { InfoIcon } from './InfoIcon'
 import { ElevationChart } from './ElevationChart'
@@ -111,6 +112,7 @@ export function RoutePanel({
   const { t, locale } = useLocale()
   const [geoLoading, setGeoLoading] = useState(false)
   const [optionsOpen, setOptionsOpen] = useState(true)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   // Drag-to-reorder state for the waypoint list. Pointer-based (not HTML5 DnD)
   // so it works identically with touch. `dragIdx` is the row being dragged,
@@ -275,19 +277,34 @@ export function RoutePanel({
           </svg>
         </span>
         <span className={styles.logoText}>{t('panel.brand')}</span>
-        <button
-          className={styles.menuBtn}
-          onClick={onOpenMenu}
-          title={t('save.menuTitle')}
-          aria-label={t('save.menuTitle')}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={styles.infoBtn}
+            onClick={() => setInfoOpen(true)}
+            title={t('info.title')}
+            aria-label={t('info.title')}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="12" cy="8" r="1.1" fill="currentColor" stroke="none" />
+              <line x1="12" y1="11" x2="12" y2="17" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            className={styles.menuBtn}
+            onClick={onOpenMenu}
+            title={t('save.menuTitle')}
+            aria-label={t('save.menuTitle')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
       </header>
+      <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
 
       <div className={styles.modeRow} role="tablist">
         <button

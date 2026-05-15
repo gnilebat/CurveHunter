@@ -39,18 +39,18 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
   },
   curvy: {
     curviness: 0.7,
-    avoidMotorways: 0.8,
-    avoidTrunks: 0.4,
+    avoidMotorways: 1,
+    avoidTrunks: 1,
     avoidUrban: 0.3,
-    ignoreUrbanCurves: true,
-    minCurveSpeed: 0,
+    ignoreUrbanCurves: false,
+    minCurveSpeed: 50,
     avoidUnpaved: true
   },
   curvyPlus: {
     curviness: 1.2,
     avoidMotorways: 1.0,
-    avoidTrunks: 0.8,
-    avoidUrban: 0.6,
+    avoidTrunks: 1.0,
+    avoidUrban: 0.3,
     ignoreUrbanCurves: true,
     minCurveSpeed: 50,
     avoidUnpaved: true
@@ -59,9 +59,9 @@ export const ROUTE_PRESETS: Record<PresetId, RouteOptions> = {
     curviness: 2.0,
     avoidMotorways: 1.0,
     avoidTrunks: 1.0,
-    avoidUrban: 0.9,
+    avoidUrban: 0.5,
     ignoreUrbanCurves: true,
-    minCurveSpeed: 70,
+    minCurveSpeed: 50,
     avoidUnpaved: true
   }
 }

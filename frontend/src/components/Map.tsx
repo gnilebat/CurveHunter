@@ -365,6 +365,12 @@ export function Map({
 
     type LineEvent = maplibregl.MapMouseEvent | maplibregl.MapTouchEvent
     const onLineDown = (e: LineEvent) => {
+      // Multi-touch = pinch-to-zoom (the user has two fingers down). Don't
+      // hijack the gesture as a route drag, even if both fingers happen to
+      // land on the route line.
+      const orig = e.originalEvent as MouseEvent | TouchEvent
+      if ('touches' in orig && orig.touches && orig.touches.length > 1) return
+
       // If the underlying DOM target is a marker, the user is grabbing a
       // waypoint pin, not the line. MapLibre fires layer-mousedown for both
       // because the marker overlaps the line visually; we must not start a
@@ -382,6 +388,14 @@ export function Map({
     }
 
     const onMove = (e: LineEvent) => {
+      // Second finger touched down mid-drag → user is now pinching. Abort the
+      // drag so pinch-to-zoom takes over and we don't drop a phantom via on
+      // release.
+      const orig = e.originalEvent as MouseEvent | TouchEvent
+      if ('touches' in orig && orig.touches && orig.touches.length > 1) {
+        if (dragging) cleanup()
+        return
+      }
       if (!dragging) return
       if (!moved && startPoint) {
         const dx = e.point.x - startPoint.x

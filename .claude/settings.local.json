@@ -132,7 +132,23 @@
       "Bash(curl -s -o /dev/null http://localhost/api/search?q=__TRACKED_VAR__)",
       "Bash(curl -s -o /dev/null -X POST http://localhost/api/route -H 'Content-Type: application/json' -d '{\"waypoints\":__TRACKED_VAR__,\"options\":{},\"alternatives\":true}')",
       "PowerShell(winget install --id Oracle.OCI-CLI --accept-source-agreements --accept-package-agreements --silent 2>&1)",
-      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\Oracle\\\\oci_cli\\\\oci.exe\" iam region list --query \"data[?\\\\\"region-name\\\\\"=='eu-frankfurt-1']\" 2>&1)"
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\Oracle\\\\oci_cli\\\\oci.exe\" iam region list --query \"data[?\\\\\"region-name\\\\\"=='eu-frankfurt-1']\" 2>&1)",
+      "Bash(\"/c/Program Files \\(x86\\)/Oracle/oci_cli/oci.exe\" iam region list --debug)",
+      "Read(//tmp/**)",
+      "Read(//c/Users/johan/.oci/**)",
+      "Bash(sed -i '/^OCI_API_KEY$/d' oci_api_key.pem)",
+      "Bash(SUPPRESS_LABEL_WARNING=True \"/c/Program Files \\(x86\\)/Oracle/oci_cli/oci.exe\" iam region list --output table)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File \"F:\\\\projects\\\\CurveHunter\\\\infra\\\\scripts\\\\oci-launch-retry.ps1\")",
+      "Bash(echo \"=== oci-launch.log ===\"; cat \"/c/Users/johan/AppData/Local/Temp/oci-launch.log\" 2>/dev/null | head -25)",
+      "Read(//c/Users/johan/AppData/Local/Temp/**)",
+      "Bash(curl -s -o /dev/null -w \"nginx :80 -> %{http_code}\\\\n\" http://localhost/)",
+      "Bash(curl -sI --max-time 10 https://sphere-treatment-subsection-architecture.trycloudflare.com/)",
+      "Bash(curl -sI --max-time 5 http://localhost/)",
+      "PowerShell(Get-Process cloudflared -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(\"killed\")",
+      "PowerShell(& \"C:\\\\Program Files \\(x86\\)\\\\cloudflared\\\\cloudflared.exe\" tunnel --url http://localhost:80 2>&1)"
     ]
   }
 }
